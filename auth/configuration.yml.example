@@ -43,6 +43,15 @@ access_control:
         - '^/shealth/healthz$'
         - '^/stock/api/health$'
       policy: bypass
+    - domain: health.cylunex.top
+      resources:
+        - '^/healthz$'
+      policy: bypass
+    - domain: health.cylunex.top
+      subject:
+        - 'group:health-users'
+        - 'group:shadow-admins'
+      policy: one_factor
     - domain: nas.cylunex.top
       resources:
         - '^/shealth(?:/.*)?$'

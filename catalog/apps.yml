@@ -19,11 +19,13 @@ apps:
     owner: cylunex
     lifecycle: production
     kind: web
-    canonical_url: https://nas.cylunex.top/shealth/
+    canonical_url: https://health.cylunex.top/
+    aliases:
+      - https://nas.cylunex.top:55080/shealth/
     auth:
       mode: forward-auth
       groups: [health-users]
-    health_path: /shealth/healthz
+    health_path: /healthz
     media: true
     llm_models: [vision-default]
     agent_audience: true

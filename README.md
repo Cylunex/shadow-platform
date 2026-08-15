@@ -21,6 +21,7 @@ Shadow 系列项目的共享基础设施，当前包含六项能力：
 | --- | --- | --- |
 | Identity | `https://auth.cylunex.top` | 登录、二次验证、OIDC |
 | Media API | `https://media.cylunex.top` | 服务端申请上传和访问地址 |
+| Health | `https://health.cylunex.top` | Authelia SSO，数据与服务仍在 NAS |
 | NAS | `https://nas.cylunex.top:55080` | 局域网直连入口，后续启用 |
 
 Travel 的正式入口仍为 `https://cylunex.top/travel/`；`travel.cylunex.top` 只做 308 跳转。
