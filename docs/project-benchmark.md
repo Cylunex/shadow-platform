@@ -10,11 +10,13 @@
 - `contracts/app-catalog.schema.json` 固定字段契约；
 - `scripts/platform_doctor.py` 检查 Catalog、LLM registry、Agent registry 和 OIDC 客户端之间的引用。
 
-## Authelia / authentik：保留 OIDC + 过渡 Forward Auth
+## Authelia / authentik：统一原生 OIDC
 
 [Authelia](https://www.authelia.com/overview/authorization/openid-connect-1.0/) 已支持标准 OIDC，[Nginx 集成](https://www.authelia.com/integration/proxies/nginx/)也覆盖 AuthRequest。authentik 的官方文档同样把原生 OIDC 用于新应用，把 [Forward Auth](https://docs.goauthentik.io/add-secure-apps/providers/proxy/forward_auth) 用于暂时不能接 OIDC 的旧应用。
 
-因此不更换身份产品：新项目使用 Authorization Code + PKCE；Garden、Health、Stock 在迁移期间使用单应用、独立授权规则的 AuthRequest。Authelia 镜像锁定版本，不使用 `latest`。
+因此不更换身份产品：所有新项目和后续改造统一使用 Authorization Code + PKCE，不再建设
+Forward Auth 过渡层。Health 已完成的 AuthRequest / Hybrid 保持现状，但属于不再扩展的
+既有例外。Authelia 锁定版本，不使用 `latest`。
 
 ## Langfuse / OpenTelemetry：只借异步遥测，不集中提示词
 

@@ -59,7 +59,9 @@ email           可变联系地址
 
 每个应用完成 Authorization Code + PKCE 流程，并建立自己的 HttpOnly 会话。应用之间不共享业务 Cookie；用户访问另一个应用时会短暂跳转 Identity，并利用已有身份会话自动返回。
 
-现有应用迁移前可以临时使用 Nginx `auth_request`，但目标状态仍是应用原生 OIDC。原生 OIDC 可以在 NAS 上本地验证签名后的令牌，避免每个业务请求都回云端鉴权。
+新项目和后续未接入项目只实现原生 OIDC，不再增加 Nginx `auth_request`、旧密码或双登录
+兼容层。Health 已存在的 Forward Auth / Hybrid 链路保持现状，视为不向其他项目扩展的
+既有例外。
 
 ### 3.2 用户组
 
@@ -79,7 +81,8 @@ email           可变联系地址
 
 IP 地址不能可靠参与跨域 OIDC 和 HTTPS。目标方案使用 `nas.example.com` 在局域网解析到 `192.0.2.10`，并使用 DNS-01 签发的证书。ShadowApp 内网路由改用 `https://nas.example.com:18080`，外网仍使用云端路由。
 
-迁移完成前，NAS 原入口保留为应急入口，不把旧认证移除。
+后续项目的 NAS 与公网入口使用同一 OIDC 身份模型；域名别名只重定向到规范入口，不建立
+第二套会话。Health 已有的内网恢复入口不作为新项目设计依据。
 
 ## 5. 媒体模型
 

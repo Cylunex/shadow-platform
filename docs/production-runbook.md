@@ -74,6 +74,10 @@ agents/registry.yml
 
 严格模式会拒绝缺失配置、`REPLACE_WITH` 占位符、Catalog 的无效引用以及缺少的 OIDC 客户端。
 
+新项目必须先按 `docs/app-integration.md` 登记独立 OIDC client、精确 callback 和准入组，
+再部署应用。不要为新项目安装 Forward Auth snippet 或保留旧密码登录；现有 AuthRequest
+配置只维护 Health 已上线链路。
+
 Authelia 固定使用 `4.39.20`。裸机部署复制
 `deploy/systemd/authelia.service.example` 为 `/etc/systemd/system/authelia.service`，并在
 `/etc/authelia/authelia.env` 中仅配置以下文件型密钥：
@@ -119,6 +123,9 @@ systemctl enable --now shadow-llm-usage-flush@shadow-travel.timer
 nginx -t
 systemctl reload nginx
 ```
+
+新业务站点的 Nginx 只负责 TLS 和反向代理，登录、callback 和应用会话全部在业务进程内
+完成。`authelia-location.conf` 与 `authelia-authrequest.conf` 不用于新项目。
 
 Identity 与业务域名的 80 端口必须为 `/.well-known/acme-challenge/` 保留 Webroot，其他
 路径再跳转 HTTPS。首次签发后执行一次无随机等待的续期演练：

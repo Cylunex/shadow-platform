@@ -1,4 +1,5 @@
 version: 1
+# forward-auth 项是历史/占位状态，不代表接入方案；对应项目改造前应切为 oidc 并登记 client。
 apps:
   garden:
     title: Shadow Garden

@@ -10,8 +10,8 @@
 - 持久数据：PostgreSQL
 - 会话：Redis
 - 二次验证：WebAuthn/TOTP
-- 新应用：OIDC Authorization Code + PKCE
-- 旧应用：Nginx AuthRequest 过渡
+- 所有新接入：OIDC Authorization Code + PKCE
+- 既有例外：Health 当前 AuthRequest / Hybrid 保持运行，但不再新增同类接入
 
 ## 上线前必须完成
 
@@ -23,3 +23,6 @@
 6. 执行 Authelia 配置校验，再允许 Nginx 转发公网流量。
 
 `oidc-clients.yml.example` 是待合并到 `identity_providers.oidc.clients` 的登记模板，其中的 secret 必须替换为 Authelia 支持的哈希格式。
+
+完整接入和一次切换步骤见 `docs/app-integration.md` 与 `docs/migration.md`。新项目不要引用
+`authelia-authrequest.conf`；该 snippet 仅为既有 Health 链路保留。

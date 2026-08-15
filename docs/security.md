@@ -6,8 +6,10 @@
 - 回调地址必须逐项登记，不使用通配符。
 - 应用以 `iss + sub` 识别用户，校验 issuer、audience、签名、过期时间和 nonce。
 - 业务应用自己的会话 Cookie 使用 `Secure`、`HttpOnly`、`SameSite=Lax`，并收窄 Path。
-- Nginx 必须覆盖而不是透传客户端提交的 `Remote-User`、`Remote-Groups` 等身份头。
-- 代理身份头只允许来自本机 Nginx 或明确的可信代理地址。
+- 新项目必须原生 OIDC，不接受 `Remote-User`、`Remote-Groups` 等代理身份头建立会话。
+- Nginx 应清空客户端提交的历史代理身份头，避免业务代码未来误用。
+- Health 的既有 Forward Auth 链路仍须同时校验真实传输对端、应用独立代理密钥和准入组；
+  该例外不得复制到新项目。
 
 ## 人类与机器凭据
 
