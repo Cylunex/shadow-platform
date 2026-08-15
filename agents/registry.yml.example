@@ -1,0 +1,31 @@
+version: 1
+
+agents:
+  health-assistant:
+    owner_app: health
+    audiences: [health]
+    scopes:
+      - health.read
+      - health.write
+      - media.read
+    credential_hash_files:
+      - agents/health-assistant/current-token.sha256
+
+  foliant-researcher:
+    owner_app: foliant
+    audiences: [foliant]
+    scopes:
+      - stock.read
+      - stock.research
+    credential_hash_files:
+      - agents/foliant-researcher/current-token.sha256
+
+  travel-planner:
+    owner_app: travel
+    audiences: [travel]
+    scopes:
+      - travel.read
+      - travel.plan
+      - media.read
+    credential_hash_files:
+      - agents/travel-planner/current-token.sha256

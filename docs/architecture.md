@@ -3,6 +3,7 @@
 ## 1. 范围
 
 Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，为需要图片的应用提供统一媒体协议。
+同时提供 LLM 非敏感配置、密钥文件约定和 Agent 本地验证规范，但不代理模型或 Agent 流量。
 
 它不负责：
 
@@ -23,6 +24,14 @@ flowchart LR
     MEDIA --> PG["PostgreSQL media schema"]
     MEDIA --> OSS["OSS / S3"]
     MEDIA --> FS["NAS 文件系统"]
+    CFG["LLM registry + secrets path"] -.部署时配置.-> APP
+    CFG -.部署时配置.-> NAS
+    APP --> LLM["LLM provider base_url"]
+    NAS --> LLM
+    AGENT["Agent"] --> APP
+    AGENT --> NAS
+    ACFG["Agent registry + token hashes"] -.本地验证配置.-> APP
+    ACFG -.本地验证配置.-> NAS
 ```
 
 ## 3. 身份模型
@@ -128,3 +137,21 @@ sequenceDiagram
 - PostgreSQL：独立数据库或 schema，使用最小权限账号。
 - Redis：Authelia 会话专用 ACL 用户和 DB index。
 - Nginx：唯一公网入口，负责 TLS、限流、请求体限制和可信转发头。
+
+## 9. LLM 配置与直连
+
+平台不部署 AI Gateway。版本化 registry 统一：
+
+- `openai-compatible` 或 `anthropic` 协议类型；
+- Provider Base URL；
+- `chat-default`、`reasoning-default`、`vision-default` 等稳定别名；
+- 实际模型、超时和备用别名；
+- 每项目密钥文件的相对位置。
+
+部署脚本将选定别名解析为项目自己的 `llm.env`，其中只包含密钥文件路径。项目后端读取密钥后直接连接供应商。平台不接触提示词、图片、工具参数、回答或流式数据。
+
+## 10. Agent 接入
+
+平台不部署 Agent Gateway。Agent registry 统一 `agent_id`、负责人项目、audience、scopes、禁用状态和 Token 摘要文件。各应用通过共享 SDK 在本地验证 Bearer Token，并继续由自己的 API/MCP 层检查资源权限、幂等和审计。
+
+凭据文件只保存高熵 Token 的 SHA-256，可同时配置当前和下一份摘要完成无停机轮换。平台不集中搬运 Foliant 工具、Health 写入接口或 Travel 规划逻辑。

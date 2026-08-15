@@ -1,0 +1,47 @@
+version: 1
+
+# 这里只保存非敏感信息。调用链始终是业务后端 -> provider base_url。
+providers:
+  primary:
+    protocol: openai-compatible
+    base_url: https://api.example.com/v1
+    credential_file: llm/{app_id}/primary-api-key
+    timeout_seconds: 90
+
+  anthropic:
+    protocol: anthropic
+    base_url: https://api.anthropic.com
+    credential_file: llm/{app_id}/anthropic-api-key
+    timeout_seconds: 120
+
+models:
+  chat-default:
+    provider: primary
+    model: REPLACE_WITH_CHAT_MODEL
+    fallbacks: [chat-backup]
+
+  chat-backup:
+    provider: anthropic
+    model: REPLACE_WITH_BACKUP_CHAT_MODEL
+
+  reasoning-default:
+    provider: primary
+    model: REPLACE_WITH_REASONING_MODEL
+    timeout_seconds: 180
+
+  vision-default:
+    provider: primary
+    model: REPLACE_WITH_VISION_MODEL
+    timeout_seconds: 120
+
+  embedding-default:
+    provider: primary
+    model: REPLACE_WITH_EMBEDDING_MODEL
+    timeout_seconds: 60
+
+# 可选：只覆盖某个应用实际需要变化的非敏感字段。
+apps:
+  health:
+    models:
+      vision-default:
+        model: REPLACE_WITH_HEALTH_VISION_MODEL

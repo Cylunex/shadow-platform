@@ -41,5 +41,24 @@
 - 应用 OIDC client secret；
 - 媒体服务凭据哈希的 pepper（如启用）；
 - OSS access credential。
+- 各项目独立的 LLM provider API Key。
 
 轮换前必须确认旧令牌和加密数据的兼容窗口。
+
+## LLM 直连
+
+- registry 禁止出现 `api_key`、`token`、`secret`、`password` 等内联字段。
+- 密钥文件路径必须解析在配置的 secrets 根目录内，拒绝绝对路径逃逸和 `..` 穿越。
+- 优先为每个应用创建独立供应商 Key；共享 Key 必须是显式决定。
+- 只有服务端读取 Key，浏览器、ShadowApp 和公开配置接口不得获取。
+- SDK 只解析配置，不发送 HTTP 请求，也不记录密钥值。
+- 可选用量事件默认只含模型、Token 数、延迟和状态，不含提示词、回答或媒体 URL。
+
+## Agent
+
+- Agent Token 必须是至少 32 字节的高熵随机值，不使用人类密码。
+- Registry 只引用 Token SHA-256 文件，不保存原始 Token。
+- 每个 Agent 明确声明 audiences 和最小 scopes，应用本地同时检查二者。
+- 写操作继续要求项目级幂等键、资源权限和审计；通过 Agent 身份不等于拥有全部业务权限。
+- Token 轮换窗口最多同时接受两份摘要，完成切换后立即移除旧摘要。
+- 未设计用户委托令牌前，不信任 Agent 自报的 `actor_sub`。

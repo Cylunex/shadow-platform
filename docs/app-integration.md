@@ -36,6 +36,29 @@ DELETE /v1/media/{media_id}
 
 业务后端应保存 `media_id`，不要保存预签名 URL。获取私密文件前先检查当前用户对业务资源的权限，再请求短时 URL。
 
+## LLM 配置
+
+应用使用 `shadow_sdk.llm.resolve_llm_config` 解析模型别名，然后用自己的官方或兼容客户端直接请求返回的 `base_url`：
+
+```python
+from openai import OpenAI
+from shadow_sdk.llm import resolve_llm_config
+
+config = resolve_llm_config(
+    "/etc/shadow-platform/llm/registry.yml",
+    secrets_dir="/etc/shadow-platform/secrets",
+    app_id="travel",
+    alias="chat-default",
+)
+client = OpenAI(base_url=config.base_url, api_key=config.read_api_key())
+```
+
+业务提示词、工具、重试策略和业务上下文仍属于应用。不得把 `read_api_key()` 的结果返回给浏览器或写入日志。
+
+## Agent
+
+应用使用 `shadow_sdk.agent.AgentAuthenticator` 本地验证 Agent Bearer Token、audience 和 scopes，不把调用转发到平台。具体接入和审计字段见 `docs/agent-access.md`。
+
 ## 健康检查
 
 每个应用继续提供无需登录、无敏感信息的 `healthz`。探活路径不得建立会话，也不得返回用户、版本密钥或数据库连接信息。

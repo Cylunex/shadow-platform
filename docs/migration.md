@@ -3,6 +3,7 @@
 ## Phase 0：旁路部署
 
 - 部署 Identity 和 Media，但不修改现有路由。
+- 建立 LLM registry 和各项目密钥文件，只生成配置，不代理或切换现有调用。
 - 使用测试用户、测试 bucket 和独立数据库验证。
 - 验证 ShadowApp WebView 的跳转、Cookie、文件选择器和返回键。
 

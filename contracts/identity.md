@@ -40,3 +40,5 @@ Remote-Email
 ## Machine identities
 
 Agent、MCP、定时任务和服务间调用不使用用户 OIDC 会话。每个调用方使用独立、可撤销的服务凭据，并通过审计字段记录 `service_id`。
+
+Agent 使用与所属项目相同的 LLM registry 和项目级密钥，直接请求供应商；身份中心和平台不代理模型内容。
