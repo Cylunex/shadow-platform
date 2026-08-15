@@ -18,7 +18,7 @@ authentication_backend:
     disable: false
   refresh_interval: 5m
   file:
-    path: /config/users_database.yml
+    path: /etc/authelia/users_database.yml
     password:
       algorithm: argon2
       argon2:
@@ -28,6 +28,11 @@ authentication_backend:
         parallelism: 4
         key_length: 32
         salt_length: 16
+
+identity_validation:
+  reset_password:
+    # 生产值通过 AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE 注入。
+    jwt_secret: ''
 
 access_control:
   default_policy: deny
@@ -79,7 +84,6 @@ session:
     host: 127.0.0.1
     port: 6379
     database_index: 2
-    username: authelia
 
 regulation:
   max_retries: 5
@@ -95,7 +99,7 @@ storage:
 
 notifier:
   filesystem:
-    filename: /config/notification.txt
+    filename: /var/lib/authelia/notification.txt
 
 # 生产密钥通过以下 *_FILE 环境变量注入，不写在本文件：
 # AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE

@@ -1,0 +1,32 @@
+[Unit]
+Description=Shadow Identity (Authelia)
+Documentation=https://www.authelia.com/
+Wants=network-online.target
+After=network-online.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=authelia
+Group=authelia
+EnvironmentFile=/etc/authelia/authelia.env
+ExecStart=/usr/local/bin/authelia --config /etc/authelia/configuration.yml
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0027
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/authelia
+
+[Install]
+WantedBy=multi-user.target

@@ -74,12 +74,32 @@ agents/registry.yml
 
 严格模式会拒绝缺失配置、`REPLACE_WITH` 占位符、Catalog 的无效引用以及缺少的 OIDC 客户端。
 
-Authelia 固定使用 `4.39.20`。合并 OIDC 客户端、JWKS 私钥和密钥文件后，必须用同版本容器验证：
+Authelia 固定使用 `4.39.20`。裸机部署复制
+`deploy/systemd/authelia.service.example` 为 `/etc/systemd/system/authelia.service`，并在
+`/etc/authelia/authelia.env` 中仅配置以下文件型密钥：
+
+```text
+AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE
+AUTHELIA_SESSION_SECRET_FILE
+AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE
+AUTHELIA_STORAGE_POSTGRES_PASSWORD_FILE
+```
+
+合并 OIDC 客户端、JWKS 私钥和密钥文件后，必须使用同版本二进制或容器验证：
 
 ```bash
+set -a && . /etc/authelia/authelia.env && set +a
+runuser -u authelia -- authelia config validate --config /etc/authelia/configuration.yml
+
+# 没有安装裸机二进制时可用同版本容器：
 docker run --rm -v /etc/authelia:/config authelia/authelia:4.39.20 \
   authelia config validate --config /config/configuration.yml
 ```
+
+首次账号不要直接授予全平台管理员组。按已接入项目从最小组开始，例如 Health 首个账号
+只加入 `health-users`；需要管理能力时再单独增加 `shadow-admins`。一次性初始密码应只保存
+在服务器 root 可读文件（当前约定为 `/root/shadow-identity-initial-password`，权限
+`0600`），首次登录后立即修改，不写入仓库或运维记录。
 
 ## 4. systemd 和 Nginx
 
@@ -99,6 +119,13 @@ systemctl enable --now shadow-llm-usage-flush@shadow-travel.timer
 ```bash
 nginx -t
 systemctl reload nginx
+```
+
+Identity 与业务域名的 80 端口必须为 `/.well-known/acme-challenge/` 保留 Webroot，其他
+路径再跳转 HTTPS。首次签发后执行一次无随机等待的续期演练：
+
+```bash
+certbot renew --cert-name shadow-services --dry-run --no-random-sleep-on-renew
 ```
 
 ## 5. 验收
