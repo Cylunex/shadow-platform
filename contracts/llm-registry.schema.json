@@ -49,6 +49,9 @@
         "protocol": {
           "enum": ["openai-compatible", "anthropic"]
         },
+        "api": {
+          "enum": ["responses", "chat-completions", "messages"]
+        },
         "base_url": {
           "type": "string",
           "format": "uri"
@@ -70,6 +73,9 @@
       "required": ["provider", "model"],
       "properties": {
         "provider": { "$ref": "#/$defs/id" },
+        "api": {
+          "enum": ["responses", "chat-completions", "messages"]
+        },
         "model": { "type": "string", "minLength": 1, "maxLength": 255 },
         "timeout_seconds": {
           "type": "integer",
@@ -89,6 +95,9 @@
       "minProperties": 1,
       "properties": {
         "provider": { "$ref": "#/$defs/id" },
+        "api": {
+          "enum": ["responses", "chat-completions", "messages"]
+        },
         "model": { "type": "string", "minLength": 1, "maxLength": 255 },
         "timeout_seconds": {
           "type": "integer",

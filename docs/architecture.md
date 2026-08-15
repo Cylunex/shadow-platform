@@ -143,12 +143,13 @@ sequenceDiagram
 平台不部署 AI Gateway。版本化 registry 统一：
 
 - `openai-compatible` 或 `anthropic` 协议类型；
+- `responses`、`chat-completions` 或 `messages` 原生 API；
 - Provider Base URL；
 - `chat-default`、`reasoning-default`、`vision-default` 等稳定别名；
 - 实际模型、超时和备用别名；
 - 每项目密钥文件的相对位置。
 
-部署脚本将选定别名解析为项目自己的 `llm.env`，其中只包含密钥文件路径。项目后端读取密钥后直接连接供应商。平台不接触提示词、图片、工具参数、回答或流式数据。
+部署脚本将选定别名解析为项目自己的 `llm.env`，其中只包含密钥文件路径。共享 SDK 在各项目进程内完成同步、异步和流式直连，并可把 Token、延迟、状态等固定元数据写入本地 outbox。平台不接触提示词、图片、工具参数、回答或流式数据；统计链路故障也不影响模型请求。
 
 ## 10. Agent 接入
 

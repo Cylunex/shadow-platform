@@ -38,22 +38,25 @@ DELETE /v1/media/{media_id}
 
 ## LLM 配置
 
-应用使用 `shadow_sdk.llm.resolve_llm_config` 解析模型别名，然后用自己的官方或兼容客户端直接请求返回的 `base_url`：
+推荐使用进程内 `LLMClient`。它解析模型别名并直接请求供应商，同时生成不含正文的用量事件：
 
 ```python
-from openai import OpenAI
-from shadow_sdk.llm import resolve_llm_config
+from shadow_sdk import JsonlUsageSink, LLMClient
 
-config = resolve_llm_config(
+client = LLMClient.from_registry(
     "/etc/shadow-platform/llm/registry.yml",
     secrets_dir="/etc/shadow-platform/secrets",
     app_id="travel",
     alias="chat-default",
+    usage_sink=JsonlUsageSink("/var/lib/shadow-travel/llm-usage.jsonl"),
 )
-client = OpenAI(base_url=config.base_url, api_key=config.read_api_key())
+response = client.create(
+    instructions="Travel 项目自己维护的系统提示词",
+    input="用户输入",
+)
 ```
 
-业务提示词、工具、重试策略和业务上下文仍属于应用。不得把 `read_api_key()` 的结果返回给浏览器或写入日志。
+FastAPI 等异步项目使用 `AsyncLLMClient`。`responses`、`chat-completions` 和 `messages` 的请求参数保持供应商原生格式；SDK 只注入 registry 里的 model。业务提示词、工具、RAG、上下文和结果持久化仍属于应用。确需供应商特有接口时可使用 `client.raw`，但该逃生口不会自动产生统一统计。
 
 ## Agent
 

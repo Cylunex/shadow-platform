@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cylunex.top/schemas/shadow-llm-usage-event-v1.json",
+  "title": "Shadow LLM Usage Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "app_id",
+    "agent_id",
+    "model_alias",
+    "provider",
+    "actual_model",
+    "protocol",
+    "api",
+    "status",
+    "latency_ms",
+    "input_tokens",
+    "output_tokens",
+    "cached_tokens",
+    "retry_count",
+    "streamed",
+    "started_at"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "app_id": { "$ref": "#/$defs/id" },
+    "agent_id": {
+      "anyOf": [
+        { "$ref": "#/$defs/id" },
+        { "type": "null" }
+      ]
+    },
+    "model_alias": { "$ref": "#/$defs/id" },
+    "provider": { "$ref": "#/$defs/id" },
+    "actual_model": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "protocol": { "enum": ["openai-compatible", "anthropic"] },
+    "api": { "enum": ["responses", "chat-completions", "messages"] },
+    "status": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "latency_ms": { "type": "integer", "minimum": 0 },
+    "input_tokens": { "$ref": "#/$defs/optionalCount" },
+    "output_tokens": { "$ref": "#/$defs/optionalCount" },
+    "cached_tokens": { "$ref": "#/$defs/optionalCount" },
+    "retry_count": { "type": "integer", "minimum": 0 },
+    "streamed": { "type": "boolean" },
+    "started_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "optionalCount": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    }
+  }
+}

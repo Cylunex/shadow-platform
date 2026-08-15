@@ -65,6 +65,8 @@ def test_resolves_app_override_and_per_app_key(tmp_path):
     )
 
     assert config.base_url == "https://llm.example.com/v1"
+    assert config.provider_id == "primary"
+    assert config.api == "responses"
     assert config.model == "health-chat-v2"
     assert config.api_key_file == key_file
     assert config.read_api_key() == "private-test-key"
@@ -83,6 +85,8 @@ def test_rendered_env_contains_key_path_but_not_key_value(tmp_path):
     output = render_env([("CHAT", config)])
 
     assert "SHADOW_LLM_CHAT_BASE_URL" in output
+    assert 'SHADOW_LLM_CHAT_PROVIDER="primary"' in output
+    assert 'SHADOW_LLM_CHAT_API="responses"' in output
     assert "primary-api-key" in output
     assert "private-test-key" not in output
 

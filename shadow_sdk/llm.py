@@ -10,6 +10,7 @@ import yaml
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 ALLOWED_PROTOCOLS = frozenset({"openai-compatible", "anthropic"})
+ALLOWED_APIS = frozenset({"responses", "chat-completions", "messages"})
 FORBIDDEN_SECRET_KEYS = frozenset(
     {"api_key", "api-key", "token", "secret", "password", "authorization"}
 )
@@ -24,7 +25,9 @@ class ResolvedLLMConfig:
     registry_version: int
     app_id: str
     alias: str
+    provider_id: str
     protocol: str
+    api: str
     base_url: str
     model: str
     api_key_file: Path
@@ -97,6 +100,15 @@ def resolve_llm_config(
     if protocol not in ALLOWED_PROTOCOLS:
         raise LLMConfigError(f"unsupported provider protocol: {protocol}")
     base_url = _validate_base_url(provider.get("base_url"))
+    api = model_config.get("api", provider.get("api"))
+    if api is None:
+        api = "messages" if protocol == "anthropic" else "responses"
+    if api not in ALLOWED_APIS:
+        raise LLMConfigError(f"unsupported LLM API: {api}")
+    if protocol == "anthropic" and api != "messages":
+        raise LLMConfigError("anthropic providers must use the messages API")
+    if protocol == "openai-compatible" and api == "messages":
+        raise LLMConfigError("openai-compatible providers cannot use the messages API")
     model = model_config.get("model")
     if not isinstance(model, str) or not model.strip():
         raise LLMConfigError(f"model name is required for alias: {alias}")
@@ -137,7 +149,9 @@ def resolve_llm_config(
         registry_version=1,
         app_id=app_id,
         alias=alias,
+        provider_id=provider_id,
         protocol=protocol,
+        api=api,
         base_url=base_url,
         model=model.strip(),
         api_key_file=credential,
@@ -188,7 +202,7 @@ def _validate_registry_shape(registry: dict[str, Any]) -> None:
             raise LLMConfigError(f"provider must be an object: {provider_id}")
         _reject_unexpected(
             provider,
-            {"protocol", "base_url", "credential_file", "timeout_seconds"},
+            {"protocol", "api", "base_url", "credential_file", "timeout_seconds"},
             f"provider {provider_id}",
         )
     models = registry["models"]
@@ -198,7 +212,7 @@ def _validate_registry_shape(registry: dict[str, Any]) -> None:
             raise LLMConfigError(f"model must be an object: {alias}")
         _reject_unexpected(
             model,
-            {"provider", "model", "timeout_seconds", "fallbacks"},
+            {"provider", "api", "model", "timeout_seconds", "fallbacks"},
             f"model {alias}",
         )
     apps = registry.get("apps") or {}
@@ -220,7 +234,7 @@ def _validate_registry_shape(registry: dict[str, Any]) -> None:
                 raise LLMConfigError(f"model override must be an object: {app_id}/{alias}")
             _reject_unexpected(
                 override,
-                {"provider", "model", "timeout_seconds", "fallbacks"},
+                {"provider", "api", "model", "timeout_seconds", "fallbacks"},
                 f"model override {app_id}/{alias}",
             )
 

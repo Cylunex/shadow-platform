@@ -4,12 +4,14 @@ version: 1
 providers:
   primary:
     protocol: openai-compatible
+    api: responses
     base_url: https://api.example.com/v1
     credential_file: llm/{app_id}/primary-api-key
     timeout_seconds: 90
 
   anthropic:
     protocol: anthropic
+    api: messages
     base_url: https://api.anthropic.com
     credential_file: llm/{app_id}/anthropic-api-key
     timeout_seconds: 120
@@ -21,8 +23,12 @@ models:
     fallbacks: [chat-backup]
 
   chat-backup:
-    provider: anthropic
+    provider: primary
     model: REPLACE_WITH_BACKUP_CHAT_MODEL
+
+  claude-default:
+    provider: anthropic
+    model: REPLACE_WITH_CLAUDE_MODEL
 
   reasoning-default:
     provider: primary

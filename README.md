@@ -4,7 +4,7 @@ Shadow 系列项目的共享基础设施，当前包含四项能力：
 
 - **Shadow Identity**：基于 Authelia 的统一登录、用户组和 OIDC 身份提供方。
 - **Shadow Media**：统一图片上传、元数据、访问签名和存储适配协议。
-- **Shadow LLM Config**：统一 Base URL、模型别名和密钥文件约定，请求由项目直连供应商。
+- **Shadow LLM SDK**：统一 Base URL、模型别名、直连客户端和脱敏用量事件，不转发模型流量。
 - **Shadow Agent Access**：统一 Agent registry、audience、scope 和本地凭据验证，不做代理。
 
 本仓库只承载跨项目能力，不承载 Garden、Health、Foliant 或 Travel 的业务数据与业务权限。
@@ -34,7 +34,7 @@ docs/                 架构、安全、接入和迁移文档
 llm/                  非敏感供应商与模型注册表
 media_service/        Shadow Media 服务
 scripts/              部署时配置渲染工具
-shadow_sdk/           身份、媒体和 LLM 配置 SDK
+shadow_sdk/           身份、媒体、LLM 直连和 Agent 验证 SDK
 tests/                自动化测试
 ```
 
@@ -46,7 +46,7 @@ tests/                自动化测试
 4. 媒体中心只执行调用方已经完成的业务授权，不理解地图、餐次或文章权限。
 5. 私密文件默认拒绝公开访问，访问地址短时有效。
 6. 真实密钥只通过受限文件挂载，不进入 Git、Compose 文件或普通环境变量。
-7. LLM 请求由业务后端直接发送给供应商，平台只统一配置，不代理提示词和响应。
+7. LLM SDK 在业务进程内直接请求供应商；平台统一配置与统计字段，不代理提示词和响应。
 
 详细方案见 [架构文档](docs/architecture.md) 和 [安全边界](docs/security.md)。
 

@@ -28,7 +28,9 @@ def render_env(configs: Sequence[tuple[str, ResolvedLLMConfig]]) -> str:
     for name, config in configs:
         prefix = f"SHADOW_LLM_{name}"
         values = {
+            "PROVIDER": config.provider_id,
             "PROTOCOL": config.protocol,
+            "API": config.api,
             "BASE_URL": config.base_url,
             "MODEL": config.model,
             "API_KEY_FILE": str(config.api_key_file),
