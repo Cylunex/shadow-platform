@@ -1,0 +1,73 @@
+version: 1
+apps:
+  garden:
+    title: Shadow Garden
+    owner: cylunex
+    lifecycle: production
+    kind: web
+    canonical_url: https://cylunex.top/
+    auth:
+      mode: public-with-protected-paths
+      groups: [garden-admins]
+    health_path: null
+    media: true
+    llm_models: []
+    agent_audience: true
+
+  health:
+    title: Shadow Health
+    owner: cylunex
+    lifecycle: production
+    kind: web
+    canonical_url: https://nas.cylunex.top/shealth/
+    auth:
+      mode: forward-auth
+      groups: [health-users]
+    health_path: /shealth/healthz
+    media: true
+    llm_models: [vision-default]
+    agent_audience: true
+
+  stock:
+    title: Shadow Stock
+    owner: cylunex
+    lifecycle: production
+    kind: web
+    canonical_url: https://nas.cylunex.top/stock/
+    auth:
+      mode: forward-auth
+      groups: [stock-users]
+    health_path: /stock/api/health
+    media: false
+    llm_models: [chat-default, reasoning-default]
+    agent_audience: true
+
+  foliant:
+    title: Shadow Foliant
+    owner: cylunex
+    lifecycle: experimental
+    kind: service
+    canonical_url: null
+    auth:
+      mode: forward-auth
+      groups: [stock-users]
+    health_path: null
+    media: true
+    llm_models: [chat-default, reasoning-default]
+    agent_audience: true
+
+  travel:
+    title: Shadow Travel
+    owner: cylunex
+    lifecycle: experimental
+    kind: web
+    canonical_url: https://cylunex.top/travel/
+    aliases:
+      - https://travel.cylunex.top/
+    auth:
+      mode: oidc
+      groups: [travel-users]
+    health_path: /travel/healthz
+    media: true
+    llm_models: [chat-default, reasoning-default, vision-default]
+    agent_audience: true

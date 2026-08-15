@@ -8,22 +8,25 @@
 - 一次性上传 Token，只保存 SHA-256；
 - 声明大小、全局大小和 Content-Type 检查；
 - 使用 Pillow 解码图片，识别实际格式和尺寸；
+- 默认重编码并移除 EXIF/GPS、ICC、注释和文本元数据；
 - SHA-256、宽高、实际 MIME 和业务引用元数据；
 - 幂等完成上传；
 - public、private、scoped 可见性；
 - private/scoped 的 HMAC 短时读取地址；
 - 跨应用查询返回 404，避免泄露对象是否存在；
-- 软删除和物理删除保留时间。
+- 软删除和物理删除保留时间；
+- 服务 Token 仅存 SHA-256 摘要，支持新旧两份凭据无停机轮换；
+- 定时清理过期上传意图、残留临时文件和到期软删除对象；
+- PostgreSQL、systemd、Nginx、生产环境变量和上线验收模板。
 
-## 上线前尚需实现
+## 当前部署边界
 
-- PostgreSQL Alembic 迁移；
-- OSS/S3 预签名 PUT、HEAD 校验和短时 GET；
-- 存储策略文件，按 `app_id` 路由 OSS 或 NAS；
-- EXIF/GPS 清除、缩略图和 WebP 变体 worker；
-- 到期上传意图与软删除对象清理任务；
-- 服务 Token 哈希存储、轮换版本和审计表；
-- 应用级格式、大小、配额和公开权限策略；
-- Nginx 限流、请求体上限和完整部署验收。
+首版适用于当前本地/NAS 图片场景，可按 `docs/production-runbook.md` 直接部署。上线前仍需为每个应用设置独立 Token、PostgreSQL、签名密钥和 HTTPS，并通过严格 doctor 与验收清单。
 
-因此当前版本是可验证的协议实现，不应直接暴露到公网。
+以下属于后续扩展，不阻塞首版上线：
+
+- 用 Alembic 管理不兼容数据库结构升级；
+- 国际对象存储、OSS/S3 预签名 PUT 和按应用路由；
+- 视频等大文件采用 multipart 或 tus 断点续传；
+- 缩略图、WebP/AVIF 变体异步 worker；
+- 应用级配额、公开权限策略和审计查询界面。

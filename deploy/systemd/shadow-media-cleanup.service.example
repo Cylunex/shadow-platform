@@ -1,0 +1,16 @@
+[Unit]
+Description=Clean expired Shadow Media data
+After=postgresql.service shadow-media.service
+
+[Service]
+Type=oneshot
+User=shadow-media
+Group=shadow-platform
+WorkingDirectory=/opt/shadow-platform
+EnvironmentFile=/etc/shadow-platform/media.env
+ExecStart=/opt/shadow-platform/.venv/bin/python scripts/cleanup_media.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/shadow-media

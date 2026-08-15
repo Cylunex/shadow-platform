@@ -28,10 +28,14 @@ flowchart LR
     CFG -.部署时配置.-> NAS
     APP --> LLM["LLM provider base_url"]
     NAS --> LLM
+    APP -.脱敏用量元数据.-> TEL["Shadow Telemetry"]
+    NAS -.脱敏用量元数据.-> TEL
     AGENT["Agent"] --> APP
     AGENT --> NAS
     ACFG["Agent registry + token hashes"] -.本地验证配置.-> APP
     ACFG -.本地验证配置.-> NAS
+    CAT["App Catalog"] -.入口、认证和能力声明.-> APP
+    CAT -.入口、认证和能力声明.-> NAS
 ```
 
 ## 3. 身份模型
@@ -120,20 +124,21 @@ sequenceDiagram
 
 ## 7. 存储路由
 
-首期建议：
+当前本地/NAS 首版：
 
 | namespace | 后端 | 默认可见性 |
 | --- | --- | --- |
-| `garden` | Aliyun OSS | public |
-| `travel` | Aliyun OSS | scoped |
+| `garden` | 本地/NAS 文件系统 | public |
+| `travel` | 本地/NAS 文件系统 | scoped |
 | `health` | NAS 文件系统 | private |
 
-媒体 ID 与存储对象键解耦。更换 bucket、迁移 NAS 或增加 CDN 不改变业务表。
+媒体 ID 与存储对象键解耦。后续接入 Aliyun OSS/S3、更换 bucket、迁移 NAS 或增加 CDN 时不改变业务表。
 
 ## 8. 部署单元
 
 - Authelia：容器，监听云服务器回环地址 `127.0.0.1:9091`。
 - Media：FastAPI，监听回环地址，建议端口 `8400`，由 systemd 管理。
+- Telemetry：FastAPI，监听回环地址 `8410`，只接收固定 LLM 用量字段。
 - PostgreSQL：独立数据库或 schema，使用最小权限账号。
 - Redis：Authelia 会话专用 ACL 用户和 DB index。
 - Nginx：唯一公网入口，负责 TLS、限流、请求体限制和可信转发头。

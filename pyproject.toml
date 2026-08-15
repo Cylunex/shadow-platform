@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shadow-platform"
-version = "0.2.0"
+version = "0.3.0"
 description = "Shared identity, media, LLM and agent foundations for Shadow applications"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
+  "jsonschema>=4.25,<5",
   "pillow>=11,<13",
   "pyyaml>=6,<7",
   "sqlalchemy>=2.0,<3",
@@ -19,7 +20,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "jsonschema>=4.25,<5",
   "pytest>=8,<10",
   "ruff>=0.12,<1",
 ]
@@ -28,7 +28,7 @@ postgres = ["psycopg[binary]>=3.2,<4"]
 s3 = ["boto3>=1.39,<2"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["media_service", "shadow_sdk"]
+packages = ["media_service", "shadow_sdk", "telemetry_service"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

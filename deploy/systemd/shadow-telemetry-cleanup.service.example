@@ -1,0 +1,16 @@
+[Unit]
+Description=Clean expired Shadow LLM telemetry
+After=postgresql.service shadow-telemetry.service
+
+[Service]
+Type=oneshot
+User=shadow-platform
+Group=shadow-platform
+WorkingDirectory=/opt/shadow-platform
+EnvironmentFile=/etc/shadow-platform/telemetry.env
+ExecStart=/opt/shadow-platform/.venv/bin/python scripts/cleanup_telemetry.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/shadow-telemetry

@@ -1,6 +1,8 @@
 # 该模板仅适用于本地/NAS 存储后端。OSS 直传不会经过此请求体入口。
 log_format shadow_media '$remote_addr [$time_local] "$request_method $uri $server_protocol" '
                         '$status $body_bytes_sent request_id=$request_id';
+limit_req_zone $binary_remote_addr zone=shadow_media_api:10m rate=20r/s;
+limit_req_zone $binary_remote_addr zone=shadow_telemetry_api:10m rate=5r/s;
 
 server {
     listen 80;
@@ -20,8 +22,24 @@ server {
     access_log /var/log/nginx/shadow-media.access.log shadow_media;
     client_max_body_size 16m;
 
+    # 固定元数据批量上报；不接收 prompt/response，限制请求体并关闭公开文档。
+    location /platform/telemetry/ {
+        client_max_body_size 512k;
+        limit_except GET POST { deny all; }
+        limit_req zone=shadow_telemetry_api burst=10 nodelay;
+
+        proxy_pass http://127.0.0.1:8410/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
+    }
+
     location / {
         limit_except GET POST PUT DELETE OPTIONS { deny all; }
+        limit_req zone=shadow_media_api burst=40 nodelay;
 
         proxy_pass http://127.0.0.1:8400;
         proxy_http_version 1.1;

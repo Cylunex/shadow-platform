@@ -103,9 +103,9 @@ protocol, api, status, latency_ms, input_tokens, output_tokens,
 cached_tokens, retry_count, streamed, started_at
 ```
 
-事件中没有 prompt、response、messages、tools、API Key、健康数据或媒体 URL。`JsonlUsageSink` 只写本地 outbox；未来的中央收集器应独立批量读取这些元数据，收集失败或积压不能阻塞 LLM 调用。
+事件中没有 prompt、response、messages、tools、API Key、健康数据或媒体 URL。`JsonlUsageSink` 只写本地 outbox；`scripts/flush_llm_usage.py` 由独立 timer 批量上传，收集失败时保留 `.sending` 文件等待重试，不能阻塞 LLM 调用。
 
-字段契约见 `contracts/llm-usage-event.schema.json`。中央汇总服务可以依此去重和聚合，不需要理解任何项目提示词。
+字段契约见 `contracts/llm-usage-event.schema.json`。`telemetry_service` 按 `(app_id, request_id)` 幂等入库，并通过 `/v1/llm-usage/summary` 提供当前应用自己的 Token、延迟和状态聚合。
 
 ## 部署时渲染
 

@@ -12,7 +12,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from .auth import ServiceIdentity, require_service
@@ -80,7 +80,7 @@ def safe_filename(value: str) -> str:
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or Settings.from_env()
     engine, session_factory = create_database(resolved.database_url)
-    storage = LocalStorage(resolved.storage_root)
+    storage = LocalStorage(resolved.storage_root, strip_metadata=resolved.strip_metadata)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -88,7 +88,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         engine.dispose()
 
-    app = FastAPI(title="Shadow Media", version="0.1.0", lifespan=lifespan)
+    expose_docs = resolved.environment != "production"
+    app = FastAPI(
+        title="Shadow Media",
+        version="0.3.0",
+        lifespan=lifespan,
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
+    )
     app.state.settings = resolved
     app.state.session_factory = session_factory
     app.state.storage = storage
@@ -96,6 +104,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/healthz", include_in_schema=False)
     def healthz():
         return {"status": "ok"}
+
+    @app.get("/readyz", include_in_schema=False)
+    def readyz(db: DbDep):
+        try:
+            db.execute(text("SELECT 1"))
+            storage.root.mkdir(parents=True, exist_ok=True)
+            if not storage.root.is_dir():
+                raise OSError("storage root is unavailable")
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="media dependencies unavailable") from exc
+        return {"status": "ready"}
 
     @app.post("/v1/uploads", response_model=UploadCreated, status_code=201)
     def create_upload(

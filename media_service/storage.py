@@ -53,8 +53,9 @@ class StorageError(ValueError):
 
 
 class LocalStorage:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, strip_metadata: bool = True):
         self.root = root.resolve()
+        self.strip_metadata = strip_metadata
         self.root.mkdir(parents=True, exist_ok=True)
 
     def path_for(self, key: str) -> Path:
@@ -91,6 +92,12 @@ class LocalStorage:
                 raise StorageError("uploaded file size does not match declaration")
 
             content_type, width, height = inspect_image(temporary)
+            if self.strip_metadata:
+                strip_image_metadata(temporary, content_type)
+                size = temporary.stat().st_size
+                if size > max_size:
+                    raise StorageError("sanitized image exceeds configured size")
+                digest = hashlib.sha256(temporary.read_bytes())
             os.replace(temporary, destination)
             return StoredImage(
                 size_bytes=size,
@@ -122,5 +129,43 @@ def inspect_image(path: Path) -> tuple[str, int, int]:
                 if width <= 0 or height <= 0:
                     raise StorageError("invalid image dimensions")
                 return content_type, width, height
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombWarning) as exc:
+    except (
+        UnidentifiedImageError,
+        OSError,
+        Image.DecompressionBombWarning,
+        Image.DecompressionBombError,
+    ) as exc:
         raise StorageError("file is not a valid supported image") from exc
+
+
+def strip_image_metadata(path: Path, content_type: str) -> None:
+    temporary = path.with_suffix(f"{path.suffix}.sanitized")
+    try:
+        with Image.open(path) as image:
+            sensitive_info = {"exif", "icc_profile", "comment", "xmp", "XML:com.adobe.xmp"}
+            textual_metadata = any(isinstance(value, str) for value in image.info.values())
+            has_sensitive_metadata = bool(image.getexif()) or bool(
+                sensitive_info.intersection(image.info)
+            )
+            if not has_sensitive_metadata and not textual_metadata:
+                return
+            image.load()
+            if getattr(image, "is_animated", False):
+                raise StorageError("animated images with metadata are not accepted")
+            if content_type == "image/jpeg":
+                image.convert("RGB").save(temporary, format="JPEG", quality=90, optimize=True)
+            elif content_type == "image/png":
+                image.save(temporary, format="PNG", optimize=True)
+            elif content_type == "image/webp":
+                image.save(temporary, format="WEBP", quality=90, method=4)
+            elif content_type in {"image/heic", "image/heif"}:
+                image.save(temporary, format="HEIF", quality=90)
+            elif content_type == "image/gif":
+                image.save(temporary, format="GIF")
+            else:
+                raise StorageError("metadata stripping is unsupported for this image type")
+        os.replace(temporary, path)
+    except (OSError, KeyError) as exc:
+        raise StorageError("image metadata could not be removed safely") from exc
+    finally:
+        temporary.unlink(missing_ok=True)
