@@ -1,0 +1,318 @@
+openapi: 3.1.0
+info:
+  title: Shadow Media API
+  version: 1.0.0-draft
+  description: |
+    业务服务使用 Bearer 服务凭据调用控制面。客户端只使用创建上传意图后
+    返回的短时上传目标，不能直接声明可信 app_id。
+servers:
+  - url: https://media.cylunex.top
+paths:
+  /v1/uploads:
+    post:
+      operationId: createUpload
+      security:
+        - serviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadCreate'
+      responses:
+        '201':
+          description: Upload intent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: File exceeds the application policy
+  /v1/uploads/{upload_id}/content:
+    put:
+      operationId: uploadLocalContent
+      description: Local/NAS backend upload target. OSS/S3 deployments return a provider URL instead.
+      parameters:
+        - $ref: '#/components/parameters/UploadId'
+      security:
+        - uploadToken: []
+      requestBody:
+        required: true
+        content:
+          image/jpeg: {}
+          image/png: {}
+          image/webp: {}
+          image/gif: {}
+          image/heic: {}
+          image/heif: {}
+      responses:
+        '204':
+          description: Content accepted and validated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '410':
+          description: Upload intent expired
+  /v1/uploads/{upload_id}/complete:
+    post:
+      operationId: completeUpload
+      security:
+        - serviceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/UploadId'
+      responses:
+        '200':
+          description: Idempotently returns the ready media object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Content has not reached uploaded state
+  /v1/media/{media_id}:
+    get:
+      operationId: getMedia
+      security:
+        - serviceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Media metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteMedia
+      description: Soft deletes the object; physical deletion happens after the retention window.
+      security:
+        - serviceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Object marked for deletion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/media/{media_id}/access:
+    post:
+      operationId: grantMediaAccess
+      description: The caller must finish business authorization before invoking this endpoint.
+      security:
+        - serviceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Public or short-lived private access URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessGrant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/content/{media_id}:
+    get:
+      operationId: readLocalContent
+      description: Local/NAS content endpoint. Private objects require the token returned by grantMediaAccess.
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+        - name: token
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Image bytes
+        '403':
+          description: Private access grant missing or invalid
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-service-token
+    uploadToken:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Value returned in UploadCreated.target.headers, using the Upload scheme.
+  parameters:
+    UploadId:
+      name: upload_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MediaId:
+      name: media_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Invalid request or image content
+    Unauthorized:
+      description: Missing or invalid credential
+    NotFound:
+      description: The resource does not exist in the caller's namespace
+  schemas:
+    Visibility:
+      type: string
+      enum: [public, private, scoped]
+    UploadCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - owner_sub
+        - resource_type
+        - resource_id
+        - visibility
+        - original_filename
+        - content_type
+        - size_bytes
+      properties:
+        owner_sub:
+          type: string
+          minLength: 1
+          maxLength: 255
+        resource_type:
+          type: string
+          pattern: '^[a-z][a-z0-9._-]*$'
+          maxLength: 64
+        resource_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        original_filename:
+          type: string
+          minLength: 1
+          maxLength: 512
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp, image/gif, image/heic, image/heif]
+        size_bytes:
+          type: integer
+          minimum: 1
+    UploadTarget:
+      type: object
+      required: [method, url, headers]
+      properties:
+        method:
+          type: string
+          const: PUT
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+    UploadCreated:
+      type: object
+      required: [upload_id, expires_at, target]
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        target:
+          $ref: '#/components/schemas/UploadTarget'
+    Media:
+      type: object
+      required:
+        - id
+        - app_id
+        - owner_sub
+        - resource_type
+        - resource_id
+        - visibility
+        - original_filename
+        - content_type
+        - size_bytes
+        - sha256
+        - width
+        - height
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        app_id:
+          type: string
+        owner_sub:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        original_filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        width:
+          type: integer
+        height:
+          type: integer
+        status:
+          type: string
+          enum: [ready, deleted]
+        created_at:
+          type: string
+          format: date-time
+    AccessGrant:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url:
+          type: string
+          format: uri
+        expires_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+    DeleteResult:
+      type: object
+      required: [id, status, delete_after]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: deleted
+        delete_after:
+          type: string
+          format: date-time

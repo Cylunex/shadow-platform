@@ -1,0 +1,13 @@
+---
+users:
+  shadow-admin:
+    disabled: false
+    displayname: Shadow Admin
+    password: 'REPLACE_WITH_AUTHELIA_ARGON2_HASH'
+    email: 'REPLACE_WITH_ADMIN_EMAIL'
+    groups:
+      - shadow-admins
+      - garden-admins
+      - health-users
+      - stock-users
+      - travel-users

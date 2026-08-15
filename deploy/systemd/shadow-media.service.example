@@ -1,0 +1,22 @@
+[Unit]
+Description=Shadow Media API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=shadow-media
+Group=shadow-media
+WorkingDirectory=/opt/shadow-platform
+EnvironmentFile=/etc/shadow-platform/media.env
+ExecStart=/opt/shadow-platform/.venv/bin/uvicorn media_service.app:app --host 127.0.0.1 --port 8400 --workers 2
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/shadow-media
+
+[Install]
+WantedBy=multi-user.target

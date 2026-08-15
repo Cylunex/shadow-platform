@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shadow-platform"
+version = "0.1.0"
+description = "Shared identity and media foundations for Shadow applications"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "pillow>=11,<13",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8,<10",
+  "ruff>=0.12,<1",
+]
+heic = ["pillow-heif>=1,<2"]
+postgres = ["psycopg[binary]>=3.2,<4"]
+s3 = ["boto3>=1.39,<2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["media_service", "shadow_sdk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

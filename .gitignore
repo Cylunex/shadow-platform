@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# 本地运行数据和真实密钥
+data/
+uploads/
+secrets/*
+!secrets/README.md
+!secrets/*.example
+auth/users_database.yml
+auth/notification.txt

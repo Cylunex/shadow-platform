@@ -1,0 +1,29 @@
+# 合并到 configuration.yml 的 identity_providers.oidc 节点。
+# 字段必须在部署时使用锁定版本的 `authelia config validate` 校验。
+identity_providers:
+  oidc:
+    jwks:
+      - algorithm: RS256
+        use: sig
+        key: |
+          REPLACE_WITH_FILE_SECRET_TEMPLATE_FOR_OIDC_PRIVATE_KEY
+    clients:
+      - client_id: shadow-travel
+        client_name: Shadow Travel
+        client_secret: 'REPLACE_WITH_HASHED_CLIENT_SECRET'
+        public: false
+        authorization_policy: one_factor
+        require_pkce: true
+        pkce_challenge_method: S256
+        redirect_uris:
+          - https://cylunex.top/travel/auth/callback
+        scopes:
+          - openid
+          - profile
+          - email
+          - groups
+        grant_types:
+          - authorization_code
+        response_types:
+          - code
+        consent_mode: implicit
