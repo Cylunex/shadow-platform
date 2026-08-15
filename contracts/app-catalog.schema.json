@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://cylunex.top/schemas/shadow-app-catalog-v1.json",
+  "$id": "https://example.com/schemas/shadow-app-catalog-v1.json",
   "title": "Shadow Application Catalog",
   "type": "object",
   "additionalProperties": false,

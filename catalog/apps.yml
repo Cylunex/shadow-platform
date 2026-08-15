@@ -2,10 +2,10 @@ version: 1
 apps:
   garden:
     title: Shadow Garden
-    owner: cylunex
+    owner: example-owner
     lifecycle: production
     kind: web
-    canonical_url: https://cylunex.top/
+    canonical_url: https://example.com/
     auth:
       mode: public-with-protected-paths
       groups: [garden-admins]
@@ -16,12 +16,12 @@ apps:
 
   health:
     title: Shadow Health
-    owner: cylunex
+    owner: example-owner
     lifecycle: production
     kind: web
-    canonical_url: https://health.cylunex.top/
+    canonical_url: https://health.example.com/
     aliases:
-      - https://nas.cylunex.top:55080/shealth/
+      - https://nas.example.com:18080/shealth/
     auth:
       mode: forward-auth
       groups: [health-users]
@@ -32,10 +32,10 @@ apps:
 
   stock:
     title: Shadow Stock
-    owner: cylunex
+    owner: example-owner
     lifecycle: production
     kind: web
-    canonical_url: https://nas.cylunex.top/stock/
+    canonical_url: https://nas.example.com/stock/
     auth:
       mode: forward-auth
       groups: [stock-users]
@@ -46,7 +46,7 @@ apps:
 
   foliant:
     title: Shadow Foliant
-    owner: cylunex
+    owner: example-owner
     lifecycle: experimental
     kind: service
     canonical_url: null
@@ -60,12 +60,12 @@ apps:
 
   travel:
     title: Shadow Travel
-    owner: cylunex
+    owner: example-owner
     lifecycle: experimental
     kind: web
-    canonical_url: https://cylunex.top/travel/
+    canonical_url: https://example.com/travel/
     aliases:
-      - https://travel.cylunex.top/
+      - https://travel.example.com/
     auth:
       mode: oidc
       groups: [travel-users]

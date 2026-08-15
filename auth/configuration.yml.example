@@ -8,7 +8,7 @@ log:
   level: info
 
 totp:
-  issuer: Cylunex
+  issuer: Example
 
 webauthn:
   display_name: Shadow Identity
@@ -37,33 +37,33 @@ identity_validation:
 access_control:
   default_policy: deny
   rules:
-    - domain: cylunex.top
+    - domain: example.com
       resources:
         - '^/admin(?:/.*)?$'
       subject:
         - 'group:garden-admins'
       policy: one_factor
-    - domain: nas.cylunex.top
+    - domain: nas.example.com
       resources:
         - '^/shealth/healthz$'
         - '^/stock/api/health$'
       policy: bypass
-    - domain: health.cylunex.top
+    - domain: health.example.com
       resources:
         - '^/healthz$'
       policy: bypass
-    - domain: health.cylunex.top
+    - domain: health.example.com
       subject:
         - 'group:health-users'
         - 'group:shadow-admins'
       policy: one_factor
-    - domain: nas.cylunex.top
+    - domain: nas.example.com
       resources:
         - '^/shealth(?:/.*)?$'
       subject:
         - 'group:health-users'
       policy: one_factor
-    - domain: nas.cylunex.top
+    - domain: nas.example.com
       resources:
         - '^/stock(?:/.*)?$'
       subject:
@@ -77,9 +77,9 @@ session:
   expiration: 12h
   remember_me: 30d
   cookies:
-    - domain: cylunex.top
-      authelia_url: https://auth.cylunex.top
-      default_redirection_url: https://cylunex.top
+    - domain: example.com
+      authelia_url: https://auth.example.com
+      default_redirection_url: https://example.com
   redis:
     host: 127.0.0.1
     port: 6379

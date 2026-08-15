@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://cylunex.top/schemas/shadow-llm-registry-v1.json",
+  "$id": "https://example.com/schemas/shadow-llm-registry-v1.json",
   "title": "Shadow LLM Registry",
   "type": "object",
   "additionalProperties": false,

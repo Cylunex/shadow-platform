@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name auth.cylunex.top;
+    server_name auth.example.com;
 
     location /.well-known/acme-challenge/ {
         root /var/www/html;
@@ -14,10 +14,10 @@ server {
 server {
     listen 443 ssl;
     http2 on;
-    server_name auth.cylunex.top;
+    server_name auth.example.com;
 
-    # ssl_certificate /etc/letsencrypt/live/cylunex.top/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/cylunex.top/privkey.pem;
+    # ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
 
     client_max_body_size 1m;
 

@@ -6,7 +6,7 @@ info:
     业务服务使用 Bearer 服务凭据调用控制面。客户端只使用创建上传意图后
     返回的短时上传目标，不能直接声明可信 app_id。
 servers:
-  - url: https://media.cylunex.top
+  - url: https://media.example.com
 paths:
   /v1/uploads:
     post:

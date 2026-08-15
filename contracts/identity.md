@@ -3,8 +3,8 @@
 ## OIDC provider
 
 ```text
-issuer: https://auth.cylunex.top
-discovery: https://auth.cylunex.top/.well-known/openid-configuration
+issuer: https://auth.example.com
+discovery: https://auth.example.com/.well-known/openid-configuration
 flow: authorization_code
 pkce: S256 required for browser and mobile-facing clients
 ```

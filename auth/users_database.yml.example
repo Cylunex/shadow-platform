@@ -1,13 +1,9 @@
 ---
 users:
-  shadow-admin:
+  demo-user:
     disabled: false
-    displayname: Shadow Admin
+    displayname: Demo User
     password: 'REPLACE_WITH_AUTHELIA_ARGON2_HASH'
-    email: 'REPLACE_WITH_ADMIN_EMAIL'
+    email: 'demo-user@example.com'
     groups:
-      - shadow-admins
-      - garden-admins
       - health-users
-      - stock-users
-      - travel-users

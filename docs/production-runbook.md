@@ -96,10 +96,9 @@ docker run --rm -v /etc/authelia:/config authelia/authelia:4.39.20 \
   authelia config validate --config /config/configuration.yml
 ```
 
-首次账号不要直接授予全平台管理员组。按已接入项目从最小组开始，例如 Health 首个账号
-只加入 `health-users`；需要管理能力时再单独增加 `shadow-admins`。一次性初始密码应只保存
-在服务器 root 可读文件（当前约定为 `/root/shadow-identity-initial-password`，权限
-`0600`），首次登录后立即修改，不写入仓库或运维记录。
+首次账号不要直接授予全平台管理员组。按已接入项目从最小组开始，需要管理能力时再单独
+增加管理组。一次性初始密码只通过密码管理器或服务器上的临时受限文件交付，首次登录后
+立即修改；账号、密码和实际文件路径都不写入仓库或运维示例。
 
 ## 4. systemd 和 Nginx
 
@@ -112,9 +111,9 @@ systemctl enable --now shadow-media-cleanup.timer shadow-telemetry-cleanup.timer
 systemctl enable --now shadow-llm-usage-flush@shadow-travel.timer
 ```
 
-应用的 LLM 客户端写 `/var/lib/<service>/llm-usage.jsonl`。对应 timer 使用 `deploy/env/llm-telemetry-app.env.example`，每分钟把元数据发送到 `https://media.cylunex.top/platform/telemetry/`。
+应用的 LLM 客户端写 `/var/lib/<service>/llm-usage.jsonl`。对应 timer 使用 `deploy/env/llm-telemetry-app.env.example`，每分钟把元数据发送到 `https://media.example.com/platform/telemetry/`。
 
-将 `deploy/nginx/media.cylunex.top.conf.example` 合并到线上配置，执行：
+将 `deploy/nginx/media.example.com.conf.example` 合并到线上配置，执行：
 
 ```bash
 nginx -t

@@ -12,7 +12,7 @@ def test_published_catalog_and_cross_references_are_valid():
     results = inspect_platform(root)
 
     assert set(catalog) == {"foliant", "garden", "health", "stock", "travel"}
-    assert catalog["travel"].canonical_url == "https://cylunex.top/travel/"
+    assert catalog["travel"].canonical_url == "https://example.com/travel/"
     assert catalog["travel"].llm_models == (
         "chat-default",
         "reasoning-default",

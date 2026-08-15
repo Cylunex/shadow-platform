@@ -11,23 +11,6 @@ Shadow 系列项目的共享基础设施，当前包含六项能力：
 
 本仓库只承载跨项目能力，不承载 Garden、Health、Foliant 或 Travel 的业务数据与业务权限。
 
-## 当前阶段
-
-当前仓库提供本地/NAS 存储场景的首次可部署基线、自动自检和运维任务。2026-08-15
-Shadow Identity 已在生产启用并首先接入 Health；Media、Telemetry、LLM 与 Agent 的统一
-配置仍按子项目迁移节奏逐项上线。
-
-目标部署地址：
-
-| 服务 | 地址 | 说明 |
-| --- | --- | --- |
-| Identity | `https://auth.cylunex.top` | 登录、二次验证、OIDC |
-| Media API | `https://media.cylunex.top` | 服务端申请上传和访问地址 |
-| Health | `https://health.cylunex.top` | Authelia SSO，数据与服务仍在 NAS |
-| NAS | `https://nas.cylunex.top:55080` | 局域网直连入口，后续启用 |
-
-Travel 的正式入口仍为 `https://cylunex.top/travel/`；`travel.cylunex.top` 只做 308 跳转。
-
 ## 目录
 
 ```text
@@ -57,36 +40,16 @@ tests/                自动化测试
 
 详细方案见 [架构文档](docs/architecture.md) 和 [安全边界](docs/security.md)。
 
-## 本地验证 Shadow Media
+## 快速验证
 
 在 Windows 上通过 Git Bash 执行：
 
 ```bash
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -e '.[dev]'
-cp .env.example .env
-.venv/Scripts/python.exe scripts/generate_service_token.py \
-  --registry secrets/service-token-hashes.json --app travel
-```
-
-另创建 `secrets/media-access-signing-key`，写入至少 32 字节的随机值，然后启动：
-
-```bash
-.venv/Scripts/python.exe -m uvicorn media_service.app:app \
-  --host 127.0.0.1 --port 8400 --env-file .env
-```
-
-验证：
-
-```bash
-curl http://127.0.0.1:8400/healthz
-.venv/Scripts/python.exe scripts/platform_doctor.py
 .venv/Scripts/python.exe -m ruff check .
 .venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe scripts/platform_doctor.py
 ```
 
-当前实现状态和扩展边界见 [Shadow Media 实现状态](docs/media-status.md)。
-
-LLM 直连配置方法见 [LLM 统一配置](docs/llm-config.md)。
-Agent 直连接入见 [Agent 统一接入](docs/agent-access.md)。
-生产部署见 [首次生产部署手册](docs/production-runbook.md)，技术取舍见 [同类项目对标](docs/project-benchmark.md)。
+具体接入和部署方式见 `docs/` 与 `deploy/` 中的示例；仓库中的域名、账号和路径均为占位值。

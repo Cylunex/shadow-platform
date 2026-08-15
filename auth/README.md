@@ -4,7 +4,7 @@
 
 ## 目标
 
-- 公网 issuer：`https://auth.cylunex.top`
+- 公网 issuer：`https://auth.example.com`
 - 本机监听：`127.0.0.1:9091`
 - 用户后端：首期 YAML 文件，管理员手工开户
 - 持久数据：PostgreSQL

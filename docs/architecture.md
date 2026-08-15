@@ -16,10 +16,10 @@ Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，为�
 
 ```mermaid
 flowchart LR
-    U["浏览器 / ShadowApp"] --> IDP["Shadow Identity\nauth.cylunex.top"]
-    U --> APP["业务应用\ncylunex.top/<app>/"]
-    U --> NAS["NAS 应用\nnas.cylunex.top"]
-    APP --> MEDIA["Shadow Media\nmedia.cylunex.top"]
+    U["浏览器 / ShadowApp"] --> IDP["Shadow Identity\nauth.example.com"]
+    U --> APP["业务应用\nexample.com/<app>/"]
+    U --> NAS["NAS 应用\nnas.example.com"]
+    APP --> MEDIA["Shadow Media\nmedia.example.com"]
     NAS --> MEDIA
     MEDIA --> PG["PostgreSQL media schema"]
     MEDIA --> OSS["OSS / S3"]
@@ -40,7 +40,7 @@ flowchart LR
 
 ## 3. 身份模型
 
-Authelia 是唯一身份提供方，公开 issuer 为 `https://auth.cylunex.top`。
+Authelia 是唯一身份提供方，公开 issuer 为 `https://auth.example.com`。
 
 应用不得把用户名、邮箱或显示名当作稳定主键。统一映射表使用：
 
@@ -77,7 +77,7 @@ email           可变联系地址
 
 ## 4. NAS 直连
 
-IP 地址不能可靠参与跨域 OIDC 和 HTTPS。目标方案使用 `nas.cylunex.top` 在局域网解析到 `192.168.0.21`，并使用 DNS-01 签发的证书。ShadowApp 内网路由改用 `https://nas.cylunex.top:55080`，外网仍使用云端路由。
+IP 地址不能可靠参与跨域 OIDC 和 HTTPS。目标方案使用 `nas.example.com` 在局域网解析到 `192.0.2.10`，并使用 DNS-01 签发的证书。ShadowApp 内网路由改用 `https://nas.example.com:18080`，外网仍使用云端路由。
 
 迁移完成前，NAS 原入口保留为应急入口，不把旧认证移除。
 

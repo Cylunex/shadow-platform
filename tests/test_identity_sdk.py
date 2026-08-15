@@ -6,7 +6,7 @@ from shadow_sdk.identity import VerifiedIdentity
 def test_verified_identity_uses_issuer_and_subject_as_external_key():
     identity = VerifiedIdentity.from_verified_claims(
         {
-            "iss": "https://auth.cylunex.top",
+            "iss": "https://auth.example.com",
             "sub": "abc-123",
             "preferred_username": "alice",
             "name": "Alice",
@@ -15,7 +15,7 @@ def test_verified_identity_uses_issuer_and_subject_as_external_key():
         }
     )
 
-    assert identity.external_key == ("https://auth.cylunex.top", "abc-123")
+    assert identity.external_key == ("https://auth.example.com", "abc-123")
     assert identity.groups == ("travel-users",)
 
 

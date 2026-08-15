@@ -20,3 +20,11 @@ secrets/*
 !secrets/*.example
 auth/users_database.yml
 auth/notification.txt
+auth/configuration.yml
+auth/oidc-clients.yml
+*.pem
+*.key
+*.p12
+*.pfx
+docs/private/
+deploy/local/
