@@ -32,12 +32,14 @@
 
 - 登录入口生成 `state`、nonce 和 PKCE；
 - callback 完整校验并交换 Token；
+- 完整验证 ID Token 后按需读取 UserInfo，并严格比对两处 `sub` 后再解析 groups；
 - `(issuer, subject)` 到内部用户的映射；
 - 应用自己的服务端会话与 Cookie；
 - 仅本站退出和全局退出；
 - 浏览器未登录返回登录跳转，机器 API 返回 JSON 401/403；
 - `/healthz` 与 `/readyz` 分离；
 - 删除对客户端 `Remote-*` 身份头的信任。
+- 对全部路由建立显式权限分类；新增路由未分类时测试失败并默认拒绝。
 
 旧登录代码不需要与 OIDC 并存。为了可回滚，保留上一个完整发布制品和数据库备份即可。
 
@@ -77,7 +79,7 @@
 | 拒绝 | 无准入组、篡改 state/nonce、错误 issuer/audience 均失败 |
 | Cookie | Secure、HttpOnly、SameSite、host-only 和 Path 正确 |
 | 机器调用 | 缺 Bearer 为 401，正确 Bearer 协议不变且不发生 302 |
-| 路由 | 规范入口可用，别名只 308，静态资源和 callback 无前缀错误 |
+| 路由 | 规范入口可用，别名只 308，静态资源和 callback 无前缀错误；新入口优先独立子域名根路径 |
 | 运维 | healthz、readyz、日志脱敏、证书续期和服务重启正常 |
 
 验收证据只保存状态码、时间、配置哈希和脱敏关联 ID，不保存账号、Token 或实际域名。
@@ -102,3 +104,19 @@
 - 其他新项目：直接按 `docs/app-integration.md`，不再评估旧登录兼容。
 
 Health 已完成的 Forward Auth / Hybrid 保持现状，不纳入后续项目的技术选型。
+
+## 9. Stock 与 Travel 实践补充
+
+Stock/Foliant 的改造说明，登录成功只是认证完成，不代表所有接口都可访问。大量既有路由应
+逐条归类为 public、readiness、user、administrator 或 machine scope；未完成用户级数据
+所有权迁移的持仓、成交和运维数据保持管理员专用。浏览器危险方法还应校验规范 Origin，
+审计只记录路由模板和允许字段。
+
+Travel 的接入说明，Agent Registry 的 audience/scope 不能替代资源授权。机器主体读取某张
+地图前还需获得该地图对 `agent_id` 的显式授权；写操作只创建幂等草案，最终变更由用户会话
+审核后通过确定性 API 应用。ShadowApp 后台同步等其他机器用途使用独立 Service Bearer，
+不能借用 Agent Token。
+
+两项目联调均发现 groups 可能只存在于 UserInfo。实现必须把“验证 ID Token -> 调用
+UserInfo -> 严格比对 subject -> 检查准入组”作为完整链路，并为 Token 校验失败保留稳定、
+脱敏的错误分类，禁止记录 code、Token、Cookie、state、nonce 或 UserInfo 正文。

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-agent-capability-manifest-v1.json",
+  "title": "Shadow Agent Capability Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "app_id", "package_version", "skills", "capabilities"],
+  "properties": {
+    "version": { "const": 1 },
+    "app_id": { "$ref": "#/$defs/id" },
+    "package_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/skill" }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/capability" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "qualified_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "summary", "capabilities"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "path": { "$ref": "#/$defs/relative_path" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/qualified_id" }
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "transport", "operation"],
+      "properties": {
+        "name": { "$ref": "#/$defs/qualified_id" },
+        "transport": { "enum": ["http", "mcp", "local"] },
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9_.:/{} -]+$"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "summary",
+        "audience",
+        "scopes",
+        "tools",
+        "effect",
+        "data_classification",
+        "confirmation",
+        "resource_grant_required",
+        "idempotency_required"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/qualified_id" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "audience": { "$ref": "#/$defs/id" },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/qualified_id" }
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/tool" }
+        },
+        "effect": { "enum": ["read", "draft", "write", "delete"] },
+        "data_classification": {
+          "enum": ["public", "internal", "personal", "sensitive"]
+        },
+        "confirmation": {
+          "enum": ["never", "before-execute", "before-apply", "always"]
+        },
+        "resource_grant_required": { "type": "boolean" },
+        "idempotency_required": { "type": "boolean" }
+      }
+    }
+  }
+}

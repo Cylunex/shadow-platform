@@ -24,8 +24,8 @@ agents:
     owner_app: travel
     audiences: [travel]
     scopes:
-      - travel.read
-      - travel.plan
+      - travel.maps.read
+      - travel.drafts.create
       - media.read
     credential_hash_files:
       - agents/travel-planner/current-token.sha256

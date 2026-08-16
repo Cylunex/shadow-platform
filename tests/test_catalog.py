@@ -27,8 +27,12 @@ def test_published_catalog_and_cross_references_are_valid():
     assert not [result for result in results if result.status == "fail"]
     auth_boundary = next(result for result in results if result.check == "catalog auth boundaries")
     oidc_contract = next(result for result in results if result.check == "OIDC client contracts")
+    capability_contract = next(
+        result for result in results if result.check == "Agent capability contracts"
+    )
     assert auth_boundary.status == "pass"
     assert oidc_contract.status == "pass"
+    assert capability_contract.status == "pass"
 
 
 def test_strict_doctor_checks_deploy_time_files_without_crashing():

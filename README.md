@@ -5,7 +5,8 @@ Shadow 系列项目的共享基础设施，当前包含六项能力：
 - **Shadow Identity**：基于 Authelia 的统一登录、用户组和 OIDC 身份提供方。
 - **Shadow Media**：统一图片上传、元数据、访问签名和存储适配协议。
 - **Shadow LLM SDK**：统一 Base URL、模型别名、直连客户端和脱敏用量事件，不转发模型流量。
-- **Shadow Agent Access**：统一 Agent registry、audience、scope 和本地凭据验证，不做代理。
+- **Shadow Agent Control Plane**：统一 Agent 身份、能力合同、跨项目路由与 Harness 装载，
+  领域 Skill/Prompt 仍归各项目且调用不经过代理。
 - **Shadow App Catalog**：统一应用所有权、入口、认证方式、健康检查和平台能力声明。
 - **Shadow Telemetry**：只汇总脱敏 LLM 用量元数据，不采集提示词和回答。
 
@@ -15,7 +16,7 @@ Shadow 系列项目的共享基础设施，当前包含六项能力：
 
 ```text
 auth/                 Authelia 配置与用户模板
-agents/               Agent 身份、audience 与 scope 注册表
+agents/               Agent 身份注册表与领域 Capability Manifest 示例
 catalog/              应用目录和跨能力声明
 contracts/            跨项目稳定接口契约
 deploy/nginx/         Nginx 认证与反代片段
@@ -37,8 +38,11 @@ tests/                自动化测试
 5. 私密文件默认拒绝公开访问，访问地址短时有效。
 6. 真实密钥只通过受限文件挂载，不进入 Git、Compose 文件或普通环境变量。
 7. LLM SDK 在业务进程内直接请求供应商；平台统一配置与统计字段，不代理提示词和响应。
+8. 用户可以面对一个统一人格，但运行时按项目使用独立 Agent principal 和最小权限凭据。
+9. 业务 Skill、Prompt、工具和 evals 属于领域项目；Platform 只聚合合同与跨项目能力。
 
-详细方案见 [架构文档](docs/architecture.md) 和 [安全边界](docs/security.md)。
+详细方案见 [架构文档](docs/architecture.md)、[统一 Agent 设计](docs/unified-agent.md)和
+[安全边界](docs/security.md)。
 
 ## 快速验证
 

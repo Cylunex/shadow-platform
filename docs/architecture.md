@@ -17,7 +17,7 @@ Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，为�
 ```mermaid
 flowchart LR
     U["浏览器 / ShadowApp"] --> IDP["Shadow Identity\nauth.example.com"]
-    U --> APP["业务应用\nexample.com/<app>/"]
+    U --> APP["业务应用\napp.example.com/"]
     U --> NAS["NAS 应用\nnas.example.com"]
     APP --> MEDIA["Shadow Media\nmedia.example.com"]
     NAS --> MEDIA
@@ -159,8 +159,29 @@ sequenceDiagram
 
 部署脚本将选定别名解析为项目自己的 `llm.env`，其中只包含密钥文件路径。共享 SDK 在各项目进程内完成同步、异步和流式直连，并可把 Token、延迟、状态等固定元数据写入本地 outbox。平台不接触提示词、图片、工具参数、回答或流式数据；统计链路故障也不影响模型请求。
 
-## 10. Agent 接入
+## 10. Agent 控制面
 
-平台不部署 Agent Gateway。Agent registry 统一 `agent_id`、负责人项目、audience、scopes、禁用状态和 Token 摘要文件。各应用通过共享 SDK 在本地验证 Bearer Token，并继续由自己的 API/MCP 层检查资源权限、幂等和审计。
+平台不部署 Agent Gateway。Agent registry 统一 `agent_id`、负责人项目、audience、scopes、
+禁用状态和 Token 摘要文件。各应用通过共享 SDK 在本地验证 Bearer Token，并继续由自己的
+API/MCP 层检查资源权限、幂等和审计。
 
-凭据文件只保存高熵 Token 的 SHA-256，可同时配置当前和下一份摘要完成无停机轮换。平台不集中搬运 Foliant 工具、Health 写入接口或 Travel 规划逻辑。
+统一 Agent 采用控制面与数据面分离：
+
+- Platform 管理全局人格、能力合同、路由、跨项目工作流和 Harness adapter；
+- 各项目管理领域 Skill、Prompt、工具实现和 evals；
+- Harness 在部署时装载各项目能力包，并使用目标项目的独立凭据直接调用；
+- 一个用户可见人格不对应一个全权限 Token，项目凭据不能互相替代。
+
+凭据文件只保存高熵 Token 的 SHA-256，可同时配置当前和下一份摘要完成无停机轮换。
+Capability Manifest 使用 `contracts/agent-capability-manifest.schema.json` 描述稳定能力、工具、
+数据敏感度、确认、资源授权和幂等要求。完整边界与 Foliant/Travel 的实践结论见
+`docs/unified-agent.md`。
+
+## 11. 新项目公网入口
+
+新增项目和后续完成入口改造的项目默认使用独立子域名根路径，例如
+`https://travel.example.com/`，不再使用主域名的 `/travel/` 一类子路径。部署在 NAS 的应用
+仍可在局域网保留 `http://nas.example.com/<app>/` 内部路径，由公网子域名的 Nginx 入口完成
+代理；内部路径不能演变成主域名的公开子路径。
+
+已经上线的旧入口不要求仅为统一形式立即迁移，随项目正常改造处理。

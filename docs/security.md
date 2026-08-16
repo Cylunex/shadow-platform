@@ -5,6 +5,9 @@
 - OIDC 只允许 Authorization Code Flow，浏览器客户端必须使用 PKCE。
 - 回调地址必须逐项登记，不使用通配符。
 - 应用以 `iss + sub` 识别用户，校验 issuer、audience、签名、过期时间和 nonce。
+- ID Token 缺少 groups 时，只有在完整验证 ID Token、调用发现文档中的 UserInfo endpoint，
+  且 UserInfo `sub` 与 ID Token `sub` 常量时间一致后，才能使用 UserInfo groups；缺组不能
+  降级为默认放行。
 - 业务应用自己的会话 Cookie 使用 `Secure`、`HttpOnly`、`SameSite=Lax`，并收窄 Path。
 - 新项目必须原生 OIDC，不接受 `Remote-User`、`Remote-Groups` 等代理身份头建立会话。
 - Nginx 应清空客户端提交的历史代理身份头，避免业务代码未来误用。
@@ -66,6 +69,10 @@ Media 与 Telemetry 共用服务 Token 摘要 registry，每个应用最多同�
 - Agent Token 必须是至少 32 字节的高熵随机值，不使用人类密码。
 - Registry 只引用 Token SHA-256 文件，不保存原始 Token。
 - 每个 Agent 明确声明 audiences 和最小 scopes，应用本地同时检查二者。
+- 用户可见的统一人格按项目使用独立 principal/Token，不持有横跨所有 audience 的万能凭据。
 - 写操作继续要求项目级幂等键、资源权限和审计；通过 Agent 身份不等于拥有全部业务权限。
+- Capability Manifest 是发现和编排元数据，不是授权来源；Skill/Prompt 不能放宽服务端策略。
+- 读取个人或敏感资源时还要检查项目数据库中的资源授权；Travel 地图授权是标准参考实现。
+- 高风险写入优先生成结构化草案，用户确认后由确定性 API 应用；Prompt 输出不是确认凭据。
 - Token 轮换窗口最多同时接受两份摘要，完成切换后立即移除旧摘要。
 - 未设计用户委托令牌前，不信任 Agent 自报的 `actor_sub`。

@@ -42,6 +42,11 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             agent_registry_path,
             root / "contracts" / "agent-registry.schema.json",
         ),
+        (
+            "Agent capability manifest schema",
+            root / "agents" / "capability-manifest.yml.example",
+            root / "contracts" / "agent-capability-manifest.schema.json",
+        ),
     )
     loaded: dict[str, dict[str, Any]] = {}
     for name, document_path, schema_path in documents:
@@ -84,6 +89,16 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             "catalog Agent references",
             "fail" if bad_agent_refs else "pass",
             ", ".join(bad_agent_refs) if bad_agent_refs else "all owners and audiences exist",
+        )
+    )
+
+    capability_manifest = loaded.get("Agent capability manifest schema", {})
+    capability_errors = _validate_capability_manifest(capability_manifest, catalog, agents)
+    results.append(
+        CheckResult(
+            "Agent capability contracts",
+            "fail" if capability_errors else "pass",
+            ", ".join(capability_errors) if capability_errors else "skills and capabilities valid",
         )
     )
 
@@ -207,6 +222,53 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             )
         )
     return results
+
+
+def _validate_capability_manifest(
+    manifest: dict[str, Any], catalog: dict[str, Any], agents: dict[str, Any]
+) -> list[str]:
+    if not manifest:
+        return []
+    errors: list[str] = []
+    capability_items = manifest.get("capabilities", [])
+    capability_ids = [item.get("id") for item in capability_items]
+    if len(capability_ids) != len(set(capability_ids)):
+        errors.append("duplicate capability ids")
+    known_capabilities = set(capability_ids)
+    skill_ids = [item.get("id") for item in manifest.get("skills", [])]
+    if len(skill_ids) != len(set(skill_ids)):
+        errors.append("duplicate skill ids")
+    for skill in manifest.get("skills", []):
+        unknown = sorted(set(skill.get("capabilities", [])) - known_capabilities)
+        if unknown:
+            errors.append(f"{skill.get('id')}:unknown={unknown}")
+    manifest_app_id = manifest.get("app_id")
+    if manifest_app_id not in catalog:
+        errors.append(f"unknown app_id={manifest_app_id}")
+    for capability in capability_items:
+        capability_id = capability.get("id")
+        audience = capability.get("audience")
+        audience_app = catalog.get(audience)
+        if not audience_app or not audience_app.agent_audience:
+            errors.append(f"{capability_id}:audience={audience}")
+        required = set(capability.get("scopes", []))
+        covered = any(
+            audience in agent.get("audiences", [])
+            and required.issubset(set(agent.get("scopes", [])))
+            for agent in agents.values()
+        )
+        if agents and not covered:
+            errors.append(f"{capability_id}:no-principal-covers-scopes")
+        effect = capability.get("effect")
+        confirmation = capability.get("confirmation")
+        idempotent = capability.get("idempotency_required")
+        if effect in {"write", "delete"} and confirmation == "never":
+            errors.append(f"{capability_id}:write-without-confirmation")
+        if effect in {"draft", "write", "delete"} and idempotent is not True:
+            errors.append(f"{capability_id}:mutation-without-idempotency")
+        if effect == "delete" and confirmation != "always":
+            errors.append(f"{capability_id}:delete-without-always-confirm")
+    return errors
 
 
 def _find_placeholders(root: Path) -> list[str]:

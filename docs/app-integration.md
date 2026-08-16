@@ -25,6 +25,10 @@
 域名别名只做 308 重定向到规范入口。OIDC 回调、Cookie 和生成链接只认规范入口，避免
 同一应用形成两套会话和回调状态。
 
+新增项目和后续完成入口改造的项目使用独立子域名根路径，例如
+`https://travel.example.com/`。不要再为主域名增加 `/travel/` 一类项目子路径。NAS 局域网
+入口可以继续使用 NAS 地址下的内部子路径，由公网 Nginx 隐藏该实现细节。
+
 ## 3. 标准登录链路
 
 ```mermaid
@@ -49,6 +53,11 @@ sequenceDiagram
 - ID Token 签名来自已登记 issuer 的当前 JWKS；
 - `issuer`、`audience`、`nonce`、`exp`、`iat` 符合预期；
 - 用户具备应用要求的最小准入组。
+
+Authelia 的 groups 可能只由 UserInfo endpoint 返回。应用应先完整验证 ID Token，再使用
+访问令牌查询 UserInfo；仅当 UserInfo `sub` 与已验证 ID Token `sub` 常量时间一致时，才可
+合并 groups、用户名、显示名和邮箱。不得因为 ID Token 缺 groups 就跳过准入检查，也不得
+信任 subject 不一致的 UserInfo。
 
 OIDC Token 只在服务端短时使用，不写入 localStorage、模板、日志或业务数据库。
 
@@ -92,13 +101,13 @@ OIDC Token 只在服务端短时使用，不写入 localStorage、模板、日�
 
 Health 所用 `authelia-authrequest.conf` 和代理身份密钥只服务既有链路，新站点不要 include。
 
-## 7. 子路径、别名和 WebView
+## 7. NAS 内部子路径、别名和 WebView
 
-如果规范入口位于子路径，例如 `https://app.example.com/travel/`：
+新项目的公网规范入口不使用子路径。若 NAS 内部仍以 `/travel/` 提供服务：
 
-- redirect URI 必须包含完整前缀；
-- 应用生成 URL、静态资源和 Cookie Path 时统一感知前缀；
-- return URL 归一化后仍必须位于该前缀内；
+- 公网 Nginx 将 `https://travel.example.com/` 映射到内部路径；
+- OIDC redirect URI、Cookie、生成链接和浏览器看到的 URL 仍以公网子域名根路径为准；
+- 如应用把内部前缀写入重定向、静态资源、PWA scope 或 Cookie Path，应在项目改造时修正；
 - 其他域名只做 308，不在别名域名上建立登录会话；
 - WebView 必须允许跳转到 Identity，并保留授权过程中所需 Cookie。
 
@@ -125,6 +134,15 @@ Base URL、模型配置和不含正文的统计。提示词、工具、RAG 和�
 
 Agent 使用 `shadow_sdk.agent.AgentAuthenticator` 在项目内验证 Token、audience 和 scopes，
 不把请求转发到 Platform。详细边界见 `docs/llm-config.md` 和 `docs/agent-access.md`。
+
+领域 Skill、Prompt、工具和 evals 放在所属项目的 `agent/` 目录，并通过
+`contracts/agent-capability-manifest.schema.json` 描述能力。Platform 只维护全局人格、能力
+注册、跨项目工作流和 Harness 装载。完整设计和 Foliant/Travel 接入经验见
+`docs/unified-agent.md`。
+
+Agent Registry 的 scope 只完成机器主体的粗粒度准入。项目仍须执行资源级权限：例如 Travel
+必须检查当前 `agent_id` 是否获得具体地图授权。写入默认采用“生成草案 -> 用户审核 ->
+确定性 API 应用”，并要求幂等键；不能相信 Agent 自报的用户身份或资源所有者。
 
 仅由 Agent/服务调用、没有浏览器会话的后台服务登记为 `kind: service` 与
 `auth.mode: service-bearer`，`groups` 必须为空，并通过 Agent registry 声明 audience/scopes。

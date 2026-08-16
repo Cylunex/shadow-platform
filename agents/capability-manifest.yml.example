@@ -1,0 +1,44 @@
+version: 1
+app_id: travel
+package_version: 1.0.0
+
+# 这是领域项目中 agent/manifest.yaml 的合同示例，不是 Platform 托管的业务能力清单。
+skills:
+  - id: route-planning
+    path: skills/route-planning/SKILL.md
+    summary: 根据已经核验的地点生成可审核路线草案
+    capabilities:
+      - travel.maps.read
+      - travel.drafts.create
+
+capabilities:
+  - id: travel.maps.read
+    summary: 读取用户明确授权给当前 Agent 的最小化地图上下文
+    audience: travel
+    scopes: [travel.maps.read]
+    tools:
+      - name: travel.maps.list
+        transport: http
+        operation: GET /api/machine/v1/agent/maps
+      - name: travel.maps.get
+        transport: http
+        operation: GET /api/machine/v1/agent/maps/{map_id}
+    effect: read
+    data_classification: personal
+    confirmation: never
+    resource_grant_required: true
+    idempotency_required: false
+
+  - id: travel.drafts.create
+    summary: 为授权地图创建待用户审核的结构化草案
+    audience: travel
+    scopes: [travel.drafts.create]
+    tools:
+      - name: travel.drafts.create
+        transport: http
+        operation: POST /api/machine/v1/agent/maps/{map_id}/drafts
+    effect: draft
+    data_classification: personal
+    confirmation: before-apply
+    resource_grant_required: true
+    idempotency_required: true
