@@ -10,6 +10,9 @@ Agent -> Health / Foliant / Travel -> 项目业务权限
 
 平台不转发 Agent 请求，也不集中承载 Foliant 的工具、Health 的写入逻辑或 Travel 的规划流程。
 
+Catalog 中纯后台服务使用 `auth.mode: service-bearer`。该值表示浏览器 Cookie 和代理身份头
+均无效；真正可调用的身份仍以本页 Agent registry 的 audience、scopes 与凭据摘要为准。
+
 ## Registry
 
 `agents/registry.yml` 登记：

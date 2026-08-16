@@ -36,11 +36,11 @@ apps:
     owner: example-owner
     lifecycle: production
     kind: web
-    canonical_url: https://nas.example.com/stock/
+    canonical_url: https://stock.example.com/
     auth:
-      mode: forward-auth
+      mode: oidc
       groups: [stock-users]
-    health_path: /stock/api/health
+    health_path: /healthz
     media: false
     llm_models: [chat-default, reasoning-default]
     agent_audience: true
@@ -52,10 +52,10 @@ apps:
     kind: service
     canonical_url: null
     auth:
-      mode: forward-auth
-      groups: [stock-users]
+      mode: service-bearer
+      groups: []
     health_path: null
-    media: true
+    media: false
     llm_models: [chat-default, reasoning-default]
     agent_audience: true
 

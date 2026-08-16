@@ -61,7 +61,13 @@
           "required": ["mode", "groups"],
           "properties": {
             "mode": {
-              "enum": ["public", "public-with-protected-paths", "forward-auth", "oidc"]
+              "enum": [
+                "public",
+                "public-with-protected-paths",
+                "forward-auth",
+                "oidc",
+                "service-bearer"
+              ]
             },
             "groups": {
               "type": "array",

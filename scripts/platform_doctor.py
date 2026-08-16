@@ -91,12 +91,16 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
     oidc_error: str | None = None
     try:
         oidc = yaml.safe_load(oidc_path.read_text(encoding="utf-8"))
+        client_items = oidc.get("identity_providers", {}).get("oidc", {}).get("clients", [])
         configured_clients = {
-            item.get("client_id", "").removeprefix("shadow-")
-            for item in oidc.get("identity_providers", {}).get("oidc", {}).get("clients", [])
+            item.get("client_id", "").removeprefix("shadow-") for item in client_items
+        }
+        clients_by_app = {
+            item.get("client_id", "").removeprefix("shadow-"): item for item in client_items
         }
     except (OSError, AttributeError, TypeError, yaml.YAMLError) as exc:
         configured_clients = set()
+        clients_by_app = {}
         oidc_error = str(exc)
     required_clients = {app.app_id for app in catalog.values() if app.auth.mode == "oidc"}
     missing_clients = sorted(required_clients - configured_clients)
@@ -117,6 +121,61 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
                 else f"missing clients: {missing_clients}"
                 if missing_clients
                 else "all OIDC apps configured"
+            ),
+        )
+    )
+
+    oidc_contract_errors: list[str] = []
+    required_scopes = {"openid", "profile", "email", "groups"}
+    for app in catalog.values():
+        if app.auth.mode != "oidc" or not app.canonical_url:
+            continue
+        client = clients_by_app.get(app.app_id)
+        if not client:
+            continue
+        callback = app.canonical_url.rstrip("/") + "/auth/callback"
+        if callback not in set(client.get("redirect_uris") or []):
+            oidc_contract_errors.append(f"{app.app_id}:callback")
+        if app.canonical_url not in set(client.get("post_logout_redirect_uris") or []):
+            oidc_contract_errors.append(f"{app.app_id}:post-logout")
+        if client.get("require_pkce") is not True or client.get("pkce_challenge_method") != "S256":
+            oidc_contract_errors.append(f"{app.app_id}:pkce")
+        if not required_scopes.issubset(set(client.get("scopes") or [])):
+            oidc_contract_errors.append(f"{app.app_id}:scopes")
+        if client.get("grant_types") != ["authorization_code"]:
+            oidc_contract_errors.append(f"{app.app_id}:grant")
+        if client.get("response_types") != ["code"]:
+            oidc_contract_errors.append(f"{app.app_id}:response")
+    results.append(
+        CheckResult(
+            "OIDC client contracts",
+            "fail" if oidc_contract_errors else "pass",
+            ", ".join(oidc_contract_errors) if oidc_contract_errors else "callbacks and PKCE valid",
+        )
+    )
+
+    auth_mode_errors: list[str] = []
+    for app in catalog.values():
+        if app.auth.mode == "oidc":
+            if app.kind != "web":
+                auth_mode_errors.append(f"{app.app_id}:oidc-kind={app.kind}")
+            if not app.auth.groups:
+                auth_mode_errors.append(f"{app.app_id}:oidc-without-groups")
+        if app.auth.mode == "service-bearer":
+            if app.kind != "service":
+                auth_mode_errors.append(f"{app.app_id}:service-bearer-kind={app.kind}")
+            if app.auth.groups:
+                auth_mode_errors.append(f"{app.app_id}:service-bearer-has-user-groups")
+            if not app.agent_audience:
+                auth_mode_errors.append(f"{app.app_id}:service-bearer-without-audience")
+    results.append(
+        CheckResult(
+            "catalog auth boundaries",
+            "fail" if auth_mode_errors else "pass",
+            (
+                ", ".join(auth_mode_errors)
+                if auth_mode_errors
+                else "OIDC and service Bearer roles valid"
             ),
         )
     )

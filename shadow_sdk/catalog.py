@@ -108,7 +108,13 @@ def load_app_catalog(path: str | Path) -> dict[str, AppDescriptor]:
             auth=AppAuth(
                 mode=_choice(
                     auth.get("mode"),
-                    {"public", "public-with-protected-paths", "forward-auth", "oidc"},
+                    {
+                        "public",
+                        "public-with-protected-paths",
+                        "forward-auth",
+                        "oidc",
+                        "service-bearer",
+                    },
                     f"auth mode for {app_id}",
                 ),
                 groups=tuple(groups),

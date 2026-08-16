@@ -13,12 +13,22 @@ def test_published_catalog_and_cross_references_are_valid():
 
     assert set(catalog) == {"foliant", "garden", "health", "stock", "travel"}
     assert catalog["travel"].canonical_url == "https://example.com/travel/"
+    assert catalog["stock"].canonical_url == "https://stock.example.com/"
+    assert catalog["stock"].auth.mode == "oidc"
+    assert catalog["stock"].health_path == "/healthz"
+    assert catalog["foliant"].auth.mode == "service-bearer"
+    assert catalog["foliant"].auth.groups == ()
+    assert catalog["foliant"].media is False
     assert catalog["travel"].llm_models == (
         "chat-default",
         "reasoning-default",
         "vision-default",
     )
     assert not [result for result in results if result.status == "fail"]
+    auth_boundary = next(result for result in results if result.check == "catalog auth boundaries")
+    oidc_contract = next(result for result in results if result.check == "OIDC client contracts")
+    assert auth_boundary.status == "pass"
+    assert oidc_contract.status == "pass"
 
 
 def test_strict_doctor_checks_deploy_time_files_without_crashing():

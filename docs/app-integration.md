@@ -126,6 +126,10 @@ Base URL、模型配置和不含正文的统计。提示词、工具、RAG 和�
 Agent 使用 `shadow_sdk.agent.AgentAuthenticator` 在项目内验证 Token、audience 和 scopes，
 不把请求转发到 Platform。详细边界见 `docs/llm-config.md` 和 `docs/agent-access.md`。
 
+仅由 Agent/服务调用、没有浏览器会话的后台服务登记为 `kind: service` 与
+`auth.mode: service-bearer`，`groups` 必须为空，并通过 Agent registry 声明 audience/scopes。
+不要把这类服务登记成 Forward Auth 应用，也不要为它创建第二个浏览器 OIDC client。
+
 ## 10. 接入验收
 
 - [ ] 未登录访问能完成 OIDC 往返并返回原始相对路径；
