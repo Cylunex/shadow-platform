@@ -16,6 +16,8 @@ def test_published_catalog_and_cross_references_are_valid():
     assert catalog["stock"].canonical_url == "https://stock.example.com/"
     assert catalog["stock"].auth.mode == "oidc"
     assert catalog["stock"].health_path == "/healthz"
+    assert catalog["garden"].auth.mode == "oidc"
+    assert catalog["garden"].health_path == "/healthz"
     assert catalog["foliant"].auth.mode == "service-bearer"
     assert catalog["foliant"].auth.groups == ()
     assert catalog["foliant"].media is False

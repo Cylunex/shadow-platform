@@ -8,9 +8,9 @@ apps:
     kind: web
     canonical_url: https://example.com/
     auth:
-      mode: public-with-protected-paths
+      mode: oidc
       groups: [garden-admins]
-    health_path: null
+    health_path: /healthz
     media: true
     llm_models: []
     agent_audience: true
