@@ -15,6 +15,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from .asset_routes import router as asset_router
+from .asset_storage import AssetLocalStorage
 from .auth import ServiceIdentity, require_service
 from .config import Settings
 from .database import Base, create_database
@@ -81,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or Settings.from_env()
     engine, session_factory = create_database(resolved.database_url)
     storage = LocalStorage(resolved.storage_root, strip_metadata=resolved.strip_metadata)
+    asset_storage = AssetLocalStorage(resolved.storage_root)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -90,8 +93,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     expose_docs = resolved.environment != "production"
     app = FastAPI(
-        title="Shadow Media",
-        version="0.3.0",
+        title="Shadow Media and Asset",
+        version="0.4.0",
         lifespan=lifespan,
         docs_url="/docs" if expose_docs else None,
         redoc_url="/redoc" if expose_docs else None,
@@ -100,6 +103,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = resolved
     app.state.session_factory = session_factory
     app.state.storage = storage
+    app.state.asset_storage = asset_storage
+    app.include_router(asset_router)
 
     @app.get("/healthz", include_in_schema=False)
     def healthz():

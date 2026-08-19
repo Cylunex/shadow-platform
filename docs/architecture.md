@@ -2,7 +2,7 @@
 
 ## 1. 范围
 
-Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，为需要图片的应用提供统一媒体协议。
+Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，并通过 Asset Service 提供统一文件协议。
 同时提供 LLM 非敏感配置、密钥文件约定和 Agent 本地验证规范，但不代理模型或 Agent 流量。
 
 它不负责：
@@ -84,7 +84,14 @@ IP 地址不能可靠参与跨域 OIDC 和 HTTPS。目标方案使用 `nas.examp
 后续项目的 NAS 与公网入口使用同一 OIDC 身份模型；域名别名只重定向到规范入口，不建立
 第二套会话。Health 已有的内网恢复入口不作为新项目设计依据。
 
-## 5. 媒体模型
+## 5. 统一资产模型
+
+新项目只保存 `asset_id`，业务对象与文件的关系以 `AssetReference` 为唯一真相。物理字节在
+`Blob` 层按 SHA-256 去重，权限与生命周期在 `Asset` 层隔离，内容变更形成 `AssetVersion`，
+缩略图和预览等输出仍是完整 Asset 并由 `AssetDerivative` 关联。详细约束见
+`docs/asset-service-v1.md`。
+
+### 5.1 旧媒体兼容模型
 
 业务应用只保存 `media_id`。媒体中心保存：
 

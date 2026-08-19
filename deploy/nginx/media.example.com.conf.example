@@ -20,7 +20,8 @@ server {
 
     # 日志使用 $uri 而不是 $request_uri，避免记录私密访问 token。
     access_log /var/log/nginx/shadow-media.access.log shadow_media;
-    client_max_body_size 16m;
+    # Legacy Media 默认为 15 MiB；Asset v1 默认为 512 MiB。
+    client_max_body_size 513m;
 
     # 固定元数据批量上报；不接收 prompt/response，限制请求体并关闭公开文档。
     location /platform/telemetry/ {

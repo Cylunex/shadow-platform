@@ -1,5 +1,8 @@
 # Shadow Media 实现状态
 
+> 本页描述旧图片兼容 API。新项目统一接入 `docs/asset-service-v1.md` 的 Asset API；旧 API
+> 保持运行并可通过回填脚本映射，不再扩展新的通用文件能力。
+
 ## 已实现并有自动测试
 
 - 每应用独立 Bearer 服务凭据和 namespace 隔离；
@@ -23,9 +26,9 @@
 
 首版适用于当前本地/NAS 图片场景，可按 `docs/production-runbook.md` 直接部署。上线前仍需为每个应用设置独立 Token、PostgreSQL、签名密钥和 HTTPS，并通过严格 doctor 与验收清单。
 
-以下属于后续扩展，不阻塞首版上线：
+以下旧规划已由 Asset v1 接管，不再在 Media 模型中重复实现：
 
-- 用 Alembic 管理不兼容数据库结构升级；
+- Asset 表结构已使用 Alembic 管理；
 - 国际对象存储、OSS/S3 预签名 PUT 和按应用路由；
 - 视频等大文件采用 multipart 或 tus 断点续传；
 - 缩略图、WebP/AVIF 变体异步 worker；

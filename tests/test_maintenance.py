@@ -1,9 +1,13 @@
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy import func, select
+
+from media_service.asset_models import Asset, AssetBlob, AssetLegacyMediaMap, AssetVersion
 from media_service.config import Settings as MediaSettings
 from media_service.database import Base as MediaBase
 from media_service.database import create_database as create_media_database
 from media_service.models import MediaObject, UploadIntent
+from scripts.backfill_assets import backfill_assets
 from scripts.cleanup_media import cleanup_media
 from scripts.cleanup_telemetry import cleanup_telemetry
 from telemetry_service.config import Settings as TelemetrySettings
@@ -120,3 +124,55 @@ def test_telemetry_cleanup_applies_retention(tmp_path):
     engine.dispose()
 
     assert cleanup_telemetry(settings, now=now) == 1
+
+
+def test_legacy_media_backfill_requires_explicit_owner_mapping_and_is_idempotent(tmp_path):
+    now = datetime.now(UTC)
+    settings = MediaSettings(
+        environment="test",
+        database_url=f"sqlite:///{tmp_path / 'backfill.db'}",
+        storage_root=tmp_path / "objects",
+        public_base_url="http://testserver",
+    )
+    engine, factory = create_media_database(settings.database_url)
+    MediaBase.metadata.create_all(engine)
+    with factory() as db:
+        db.add(
+            MediaObject(
+                id="media-backfill",
+                app_id="garden",
+                owner_sub="legacy-subject",
+                resource_type="post",
+                resource_id="42",
+                visibility="scoped",
+                original_filename="cover.jpg",
+                content_type="image/jpeg",
+                size_bytes=4,
+                sha256="a" * 64,
+                width=10,
+                height=20,
+                storage_backend="local",
+                storage_key="garden/cover.jpg",
+                status="ready",
+                created_at=now,
+            )
+        )
+        db.commit()
+    engine.dispose()
+
+    owner_id = "20000000-0000-4000-8000-000000000002"
+    first = backfill_assets(settings, {"legacy-subject": owner_id}, now=now)
+    second = backfill_assets(settings, {"legacy-subject": owner_id}, now=now)
+    assert first.migrated == 1
+    assert second.skipped == 1
+
+    engine, factory = create_media_database(settings.database_url)
+    with factory() as db:
+        asset = db.scalar(select(Asset))
+        version = db.scalar(select(AssetVersion))
+        assert asset.owner_id == owner_id
+        assert asset.access_mode == "delegated"
+        assert version.source_fidelity == "migrated_sanitized"
+        assert db.scalar(select(func.count()).select_from(AssetBlob)) == 1
+        assert db.get(AssetLegacyMediaMap, "media-backfill").asset_id == asset.id
+    engine.dispose()

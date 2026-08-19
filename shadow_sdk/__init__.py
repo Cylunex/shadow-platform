@@ -1,6 +1,7 @@
 """Small integration helpers shared by Shadow applications."""
 
 from .agent import AgentAuthenticator, AgentAuthError, AgentIdentity
+from .assets import AssetClient, AssetClientError
 from .catalog import AppDescriptor, CatalogError, load_app_catalog
 from .identity import VerifiedIdentity
 from .llm import LLMConfigError, ResolvedLLMConfig, resolve_llm_config
@@ -23,6 +24,8 @@ __all__ = [
     "AgentAuthenticator",
     "AgentIdentity",
     "AppDescriptor",
+    "AssetClient",
+    "AssetClientError",
     "AsyncLLMClient",
     "CatalogError",
     "JsonlUsageSink",
