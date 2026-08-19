@@ -52,6 +52,27 @@ identity_providers:
           - code
         consent_mode: implicit
 
+      - client_id: shadow-health
+        client_name: Shadow Health
+        client_secret: 'REPLACE_WITH_HASHED_HEALTH_CLIENT_SECRET'
+        public: false
+        authorization_policy: one_factor
+        require_pkce: true
+        pkce_challenge_method: S256
+        redirect_uris:
+          - https://health.example.com/auth/callback
+          - https://health.example.com/
+        scopes:
+          - openid
+          - profile
+          - email
+          - groups
+        grant_types:
+          - authorization_code
+        response_types:
+          - code
+        consent_mode: implicit
+
       - client_id: shadow-travel
         client_name: Shadow Travel
         client_secret: 'REPLACE_WITH_HASHED_CLIENT_SECRET'

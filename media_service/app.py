@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -104,6 +105,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.session_factory = session_factory
     app.state.storage = storage
     app.state.asset_storage = asset_storage
+    if resolved.asset_cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(resolved.asset_cors_origins),
+            allow_credentials=False,
+            allow_methods=["PUT", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type"],
+            max_age=600,
+        )
     app.include_router(asset_router)
 
     @app.get("/healthz", include_in_schema=False)

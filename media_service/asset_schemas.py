@@ -48,12 +48,14 @@ class AssetUploadTarget(BaseModel):
     method: Literal["PUT"] = "PUT"
     url: str
     headers: dict[str, str]
+    route: str = "canonical"
 
 
 class AssetUploadCreated(BaseModel):
     upload_session_id: str
     expires_at: datetime
     target: AssetUploadTarget
+    alternate_targets: list[AssetUploadTarget] = Field(default_factory=list)
 
 
 class AssetVersionUploadCreate(BaseModel):

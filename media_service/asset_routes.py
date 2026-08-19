@@ -209,6 +209,46 @@ def _outbox(
     )
 
 
+def _asset_upload_response(
+    settings,
+    *,
+    session_id: str,
+    expires_at: datetime,
+    token: str,
+    declared_mime: str,
+) -> AssetUploadCreated:
+    headers = {
+        "Authorization": f"Upload {token}",
+        "Content-Type": declared_mime,
+    }
+    path = f"/v1/upload-sessions/{session_id}/content"
+    target = AssetUploadTarget(
+        url=f"{settings.public_base_url}{path}",
+        headers=headers,
+        route="canonical",
+    )
+    alternates: list[AssetUploadTarget] = []
+    seen = {settings.public_base_url.rstrip("/")}
+    for index, base_url in enumerate(settings.asset_upload_base_urls, start=1):
+        normalized = base_url.rstrip("/")
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        alternates.append(
+            AssetUploadTarget(
+                url=f"{normalized}{path}",
+                headers=headers,
+                route=f"alternate-{index}",
+            )
+        )
+    return AssetUploadCreated(
+        upload_session_id=session_id,
+        expires_at=expires_at,
+        target=target,
+        alternate_targets=alternates,
+    )
+
+
 @router.post("/v1/upload-sessions", response_model=AssetUploadCreated, status_code=201)
 def create_asset_upload(
     body: AssetUploadCreate,
@@ -240,16 +280,12 @@ def create_asset_upload(
             raise HTTPException(status_code=409, detail="Idempotency-Key payload mismatch")
         expires_at = _as_utc(existing.expires_at)
         token = _upload_token(existing.id, expires_at, _signing_key(request))
-        return AssetUploadCreated(
-            upload_session_id=existing.id,
+        return _asset_upload_response(
+            settings,
+            session_id=existing.id,
             expires_at=expires_at,
-            target=AssetUploadTarget(
-                url=f"{settings.public_base_url}/v1/upload-sessions/{existing.id}/content",
-                headers={
-                    "Authorization": f"Upload {token}",
-                    "Content-Type": existing.declared_mime,
-                },
-            ),
+            token=token,
+            declared_mime=existing.declared_mime,
         )
 
     session_id = str(uuid.uuid4())
@@ -283,13 +319,12 @@ def create_asset_upload(
     )
     db.add(session)
     db.commit()
-    return AssetUploadCreated(
-        upload_session_id=session.id,
+    return _asset_upload_response(
+        settings,
+        session_id=session.id,
         expires_at=expires_at,
-        target=AssetUploadTarget(
-            url=f"{settings.public_base_url}/v1/upload-sessions/{session.id}/content",
-            headers={"Authorization": f"Upload {token}", "Content-Type": declared_mime},
-        ),
+        token=token,
+        declared_mime=declared_mime,
     )
 
 
@@ -332,16 +367,12 @@ def create_asset_version_upload(
             raise HTTPException(status_code=409, detail="Idempotency-Key payload mismatch")
         expires_at = _as_utc(existing.expires_at)
         token = _upload_token(existing.id, expires_at, _signing_key(request))
-        return AssetUploadCreated(
-            upload_session_id=existing.id,
+        return _asset_upload_response(
+            settings,
+            session_id=existing.id,
             expires_at=expires_at,
-            target=AssetUploadTarget(
-                url=f"{settings.public_base_url}/v1/upload-sessions/{existing.id}/content",
-                headers={
-                    "Authorization": f"Upload {token}",
-                    "Content-Type": existing.declared_mime,
-                },
-            ),
+            token=token,
+            declared_mime=existing.declared_mime,
         )
 
     session_id = str(uuid.uuid4())
@@ -372,13 +403,12 @@ def create_asset_version_upload(
     )
     db.add(session)
     db.commit()
-    return AssetUploadCreated(
-        upload_session_id=session.id,
+    return _asset_upload_response(
+        settings,
+        session_id=session.id,
         expires_at=expires_at,
-        target=AssetUploadTarget(
-            url=f"{settings.public_base_url}/v1/upload-sessions/{session.id}/content",
-            headers={"Authorization": f"Upload {token}", "Content-Type": declared_mime},
-        ),
+        token=token,
+        declared_mime=declared_mime,
     )
 
 

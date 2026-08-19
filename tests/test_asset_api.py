@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import func, select
@@ -39,8 +40,8 @@ def jpeg_with_exif() -> bytes:
     return output.getvalue()
 
 
-def make_client(tmp_path):
-    settings = Settings(
+def make_client(tmp_path, **overrides):
+    values = dict(
         environment="test",
         database_url=f"sqlite:///{tmp_path / 'asset.db'}",
         storage_root=tmp_path / "objects",
@@ -51,6 +52,8 @@ def make_client(tmp_path):
         },
         access_signing_key="test-signing-key-with-sufficient-entropy",
     )
+    values.update(overrides)
+    settings = Settings(**values)
     return TestClient(create_app(settings)), settings
 
 
@@ -124,6 +127,61 @@ def upload_asset(
     )
     assert completed.status_code == 200, completed.text
     return completed.json()
+
+
+def test_upload_session_advertises_local_targets_and_exact_cors(tmp_path):
+    client, _ = make_client(
+        tmp_path,
+        asset_upload_base_urls=(
+            "http://nas.example.test:55080/platform/assets",
+            "https://assets-lan.example.test",
+        ),
+        asset_cors_origins=("https://garden.example.test",),
+        allow_insecure_asset_upload_targets=True,
+    )
+    data = png_bytes()
+    with client:
+        created = client.post(
+            "/v1/upload-sessions",
+            headers=authorization(),
+            json={
+                "owner_id": OWNER_ID,
+                "original_filename": "direct.png",
+                "content_type": "image/png",
+                "size_bytes": len(data),
+            },
+        )
+        assert created.status_code == 201
+        payload = created.json()
+        assert payload["target"]["route"] == "canonical"
+        assert payload["target"]["url"].startswith("http://testserver/")
+        assert [target["route"] for target in payload["alternate_targets"]] == [
+            "alternate-1",
+            "alternate-2",
+        ]
+        assert payload["alternate_targets"][0]["url"].startswith(
+            "http://nas.example.test:55080/platform/assets/"
+        )
+        assert payload["alternate_targets"][0]["headers"] == payload["target"]["headers"]
+
+        preflight = client.options(
+            "/v1/upload-sessions/example/content",
+            headers={
+                "Origin": "https://garden.example.test",
+                "Access-Control-Request-Method": "PUT",
+                "Access-Control-Request-Headers": "authorization,content-type",
+            },
+        )
+        assert preflight.status_code == 200
+        assert preflight.headers["access-control-allow-origin"] == "https://garden.example.test"
+
+
+def test_insecure_upload_target_requires_explicit_opt_in(tmp_path):
+    with pytest.raises(ValueError, match="must use HTTPS"):
+        make_client(
+            tmp_path,
+            asset_upload_base_urls=("http://nas.example.test:55080/platform/assets",),
+        )
 
 
 def test_asset_upload_preserves_original_and_deduplicates_only_blob(tmp_path):

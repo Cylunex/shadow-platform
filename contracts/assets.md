@@ -17,6 +17,10 @@
 | `POST /v1/asset-derivatives` | 登记衍生版本关系 | source + recipe + version + params hash |
 | `POST /v1/asset-versions/{id}/access-grants` | 签发版本级短时访问 | 可重复 |
 
+Platform 返回的 `target` 是兼容客户端使用的规范上传入口。部署配置了受控局域网入口时，
+响应还可包含 `alternate_targets`；它们共享同一个短时、单会话 Upload Token。客户端可以
+先探测局域网目标，失败后使用规范入口，但不得持久化 Upload Token 或把目标改写为任意主机。
+
 稳定枚举：
 
 ```text

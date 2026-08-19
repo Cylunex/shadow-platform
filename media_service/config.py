@@ -55,6 +55,12 @@ def _read_token_file(path: str | None) -> dict[str, tuple[str, ...]]:
     return load_service_token_hashes(path)
 
 
+def _csv_urls(value: str) -> tuple[str, ...]:
+    return tuple(
+        dict.fromkeys(item.strip().rstrip("/") for item in value.split(",") if item.strip())
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     environment: str = "development"
@@ -75,6 +81,9 @@ class Settings:
     asset_orphan_grace_days: int = 7
     asset_blob_gc_min_age_hours: int = 24
     asset_allowed_mime_types: frozenset[str] = ALLOWED_ASSET_MIME_TYPES
+    asset_upload_base_urls: tuple[str, ...] = ()
+    asset_cors_origins: tuple[str, ...] = ()
+    allow_insecure_asset_upload_targets: bool = False
 
     def __post_init__(self) -> None:
         if self.environment not in {"development", "test", "production"}:
@@ -99,6 +108,34 @@ class Settings:
             raise ValueError("asset orphan grace must be between 1 and 365 days")
         if not 1 <= self.asset_blob_gc_min_age_hours <= 24 * 365:
             raise ValueError("asset Blob GC minimum age must be between 1 hour and 1 year")
+        for base_url in self.asset_upload_base_urls:
+            parsed_upload = urlsplit(base_url)
+            if (
+                not parsed_upload.hostname
+                or parsed_upload.username
+                or parsed_upload.password
+                or parsed_upload.query
+                or parsed_upload.fragment
+            ):
+                raise ValueError(
+                    "asset upload base URLs must not contain credentials, query or fragment"
+                )
+            if parsed_upload.scheme != "https" and not (
+                self.allow_insecure_asset_upload_targets and parsed_upload.scheme == "http"
+            ):
+                raise ValueError("asset upload base URLs must use HTTPS")
+        for origin in self.asset_cors_origins:
+            parsed_origin = urlsplit(origin)
+            if (
+                parsed_origin.scheme not in {"http", "https"}
+                or not parsed_origin.hostname
+                or parsed_origin.username
+                or parsed_origin.password
+                or parsed_origin.path not in {"", "/"}
+                or parsed_origin.query
+                or parsed_origin.fragment
+            ):
+                raise ValueError("asset CORS origins must be valid HTTP origins")
         if self.environment == "production":
             if not self.service_token_hashes:
                 raise ValueError("production media service tokens are required")
@@ -140,4 +177,10 @@ class Settings:
             asset_trash_retention_days=int(os.getenv("SHADOW_ASSET_TRASH_RETENTION_DAYS", "30")),
             asset_orphan_grace_days=int(os.getenv("SHADOW_ASSET_ORPHAN_GRACE_DAYS", "7")),
             asset_blob_gc_min_age_hours=int(os.getenv("SHADOW_ASSET_BLOB_GC_MIN_AGE_HOURS", "24")),
+            asset_upload_base_urls=_csv_urls(os.getenv("SHADOW_ASSET_UPLOAD_BASE_URLS", "")),
+            asset_cors_origins=_csv_urls(os.getenv("SHADOW_ASSET_CORS_ORIGINS", "")),
+            allow_insecure_asset_upload_targets=os.getenv(
+                "SHADOW_ASSET_ALLOW_INSECURE_UPLOAD_TARGETS", "false"
+            ).lower()
+            in {"1", "true", "yes"},
         )
