@@ -15,6 +15,7 @@ def test_published_catalog_and_cross_references_are_valid():
         "foliant",
         "garden",
         "health",
+        "ledger",
         "notifications",
         "stock",
         "travel",
@@ -30,6 +31,8 @@ def test_published_catalog_and_cross_references_are_valid():
     assert catalog["foliant"].media is False
     assert catalog["notifications"].auth.groups == ("shadow-users",)
     assert catalog["notifications"].agent_audience is False
+    assert catalog["ledger"].auth.groups == ("ledger-users",)
+    assert catalog["ledger"].media is True
     assert catalog["travel"].llm_models == (
         "chat-default",
         "reasoning-default",

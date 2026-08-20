@@ -9,3 +9,4 @@ users:
       - shadow-users
       - shadow-admins
       - health-users
+      - ledger-users

@@ -73,6 +73,7 @@ email           可变联系地址
 | `shadow-admins` | 平台管理 |
 | `garden-admins` | Garden 管理后台 |
 | `health-users` | Health 页面准入 |
+| `ledger-users` | Ledger 个人财务与消费准入 |
 | `stock-users` | Stock 页面准入 |
 | `travel-users` | Travel 应用准入 |
 

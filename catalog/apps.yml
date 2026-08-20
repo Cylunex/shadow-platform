@@ -74,6 +74,20 @@ apps:
     llm_models: [chat-default, reasoning-default, vision-default]
     agent_audience: true
 
+  ledger:
+    title: Shadow Ledger
+    owner: example-owner
+    lifecycle: production
+    kind: web
+    canonical_url: https://ledger.example.com/
+    auth:
+      mode: oidc
+      groups: [ledger-users]
+    health_path: /healthz
+    media: true
+    llm_models: []
+    agent_audience: false
+
   notifications:
     title: Shadow Notifications
     owner: example-owner

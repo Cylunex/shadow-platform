@@ -13,7 +13,8 @@ Shadow 系列项目的共享基础设施，当前包含八项能力：
 - **Shadow Notifications**：统一持久收件箱、Telegram/QQ/飞书投递、群聊安全命令桥和
   平台运维状态。
 
-本仓库只承载跨项目能力，不承载 Garden、Health、Foliant 或 Travel 的业务数据与业务权限。
+本仓库只承载跨项目能力，不承载 Garden、Health、Foliant、Travel 或 Ledger 的业务数据与
+业务权限。
 
 ## 目录
 
