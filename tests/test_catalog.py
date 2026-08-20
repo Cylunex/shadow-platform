@@ -11,7 +11,14 @@ def test_published_catalog_and_cross_references_are_valid():
     catalog = load_app_catalog(root / "catalog" / "apps.yml")
     results = inspect_platform(root)
 
-    assert set(catalog) == {"foliant", "garden", "health", "stock", "travel"}
+    assert set(catalog) == {
+        "foliant",
+        "garden",
+        "health",
+        "notifications",
+        "stock",
+        "travel",
+    }
     assert catalog["travel"].canonical_url == "https://example.com/travel/"
     assert catalog["stock"].canonical_url == "https://stock.example.com/"
     assert catalog["stock"].auth.mode == "oidc"
@@ -21,6 +28,8 @@ def test_published_catalog_and_cross_references_are_valid():
     assert catalog["foliant"].auth.mode == "service-bearer"
     assert catalog["foliant"].auth.groups == ()
     assert catalog["foliant"].media is False
+    assert catalog["notifications"].auth.groups == ("shadow-users",)
+    assert catalog["notifications"].agent_audience is False
     assert catalog["travel"].llm_models == (
         "chat-default",
         "reasoning-default",

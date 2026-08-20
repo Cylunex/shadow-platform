@@ -1,0 +1,15 @@
+[Unit]
+Description=Clean expired Shadow notification data
+
+[Service]
+Type=oneshot
+User=shadow-platform
+Group=shadow-platform
+WorkingDirectory=/opt/shadow-platform
+EnvironmentFile=/etc/shadow-platform/notification.env
+ExecStart=/opt/shadow-platform/.venv/bin/python scripts/cleanup_notifications.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/etc/shadow-platform

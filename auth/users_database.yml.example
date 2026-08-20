@@ -6,4 +6,6 @@ users:
     password: 'REPLACE_WITH_AUTHELIA_ARGON2_HASH'
     email: 'demo-user@example.com'
     groups:
+      - shadow-users
+      - shadow-admins
       - health-users

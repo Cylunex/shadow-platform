@@ -1,6 +1,6 @@
 # Shadow Platform
 
-Shadow 系列项目的共享基础设施，当前包含七项能力：
+Shadow 系列项目的共享基础设施，当前包含八项能力：
 
 - **Shadow Identity**：基于 Authelia 的统一登录、用户组和 OIDC 身份提供方。
 - **Shadow Media**：统一图片上传、元数据、访问签名和存储适配协议。
@@ -10,6 +10,8 @@ Shadow 系列项目的共享基础设施，当前包含七项能力：
   领域 Skill/Prompt 仍归各项目且调用不经过代理。
 - **Shadow App Catalog**：统一应用所有权、入口、认证方式、健康检查和平台能力声明。
 - **Shadow Telemetry**：只汇总脱敏 LLM 用量元数据，不采集提示词和回答。
+- **Shadow Notifications**：统一持久收件箱、Telegram/QQ/飞书投递、群聊安全命令桥和
+  平台运维状态。
 
 本仓库只承载跨项目能力，不承载 Garden、Health、Foliant 或 Travel 的业务数据与业务权限。
 
@@ -25,6 +27,7 @@ docs/                 架构、安全、接入和迁移文档
 llm/                  非敏感供应商与模型注册表
 media_service/        Shadow Media 兼容 API 与 Asset 服务
 telemetry_service/    脱敏 LLM 用量收集与聚合服务
+notification_service/ 通知收件箱、通道投递、Chat Gateway bridge 与运维页
 scripts/              部署时配置渲染工具
 shadow_sdk/           身份、媒体、LLM 直连和 Agent 验证 SDK
 tests/                自动化测试
@@ -43,7 +46,8 @@ tests/                自动化测试
 9. 业务 Skill、Prompt、工具和 evals 属于领域项目；Platform 只聚合合同与跨项目能力。
 
 详细方案见 [架构文档](docs/architecture.md)、[Asset v1 设计](docs/asset-service-v1.md)、
-[统一 Agent 设计](docs/unified-agent.md)和[安全边界](docs/security.md)。
+[通知与收件箱设计](docs/notifications.md)、[统一 Agent 设计](docs/unified-agent.md)和
+[安全边界](docs/security.md)。
 
 ## 快速验证
 

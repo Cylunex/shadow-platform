@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Shadow 运维</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/operations.js" defer></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">SHADOW PLATFORM</p><h1>运维状态</h1></div>
+    <nav><a href="/inbox">收件箱</a></nav>
+  </header>
+  <main>
+    <section class="metrics">
+      <article><strong>{{ summary.deliveries_pending }}</strong><span>待投递</span></article>
+      <article><strong>{{ summary.deliveries_retrying }}</strong><span>重试中</span></article>
+      <article class="{% if summary.deliveries_dead_letter %}danger{% endif %}"><strong>{{ summary.deliveries_dead_letter }}</strong><span>死信</span></article>
+      <article><strong>{{ summary.enabled_targets }}/{{ summary.configured_targets }}</strong><span>启用目标</span></article>
+    </section>
+    <section>
+      <h2>服务探活</h2>
+      <div class="probe-list">
+      {% for probe in summary.probes %}
+        <article class="probe probe-{{ probe.status }}">
+          <strong>{{ probe.service_id }}</strong>
+          <span>{{ probe.status }}{% if probe.latency_ms is not none %} · {{ probe.latency_ms }}ms{% endif %}</span>
+          {% if probe.consecutive_failures %}<small>连续失败 {{ probe.consecutive_failures }} 次</small>{% endif %}
+        </article>
+      {% else %}
+        <div class="empty"><strong>尚无探活结果</strong><span>Worker 启动后会按配置检查本机服务。</span></div>
+      {% endfor %}
+      </div>
+    </section>
+    <section>
+      <h2>最近死信</h2>
+      <div class="probe-list">
+      {% for item in summary.recent_dead_letters %}
+        <article class="probe probe-unhealthy" data-delivery-id="{{ item.id }}">
+          <strong>{{ item.source_app_id }} · {{ item.title }}</strong>
+          <span>{{ item.channel }}/{{ item.account_id }} · {{ item.target_label }} · 尝试 {{ item.attempts }} 次</span>
+          <small>{{ item.last_error_code or 'unknown' }}{% if item.last_error_detail %} · {{ item.last_error_detail }}{% endif %}</small>
+          <button type="button" data-retry-delivery>重新投递</button>
+        </article>
+      {% else %}
+        <div class="empty"><strong>没有死信</strong><span>不可恢复的投递失败会出现在这里。</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

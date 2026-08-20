@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Shadow notification cleanup
+
+[Timer]
+OnCalendar=*-*-* 04:37:00
+Persistent=true
+RandomizedDelaySec=20m
+
+[Install]
+WantedBy=timers.target

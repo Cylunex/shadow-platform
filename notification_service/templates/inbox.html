@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Shadow 收件箱</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/inbox.js" defer></script>
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">SHADOW PLATFORM</p>
+      <h1>收件箱</h1>
+    </div>
+    <nav>
+      {% if is_admin %}<a href="/operations">运维</a>{% endif %}
+      <button class="text-button" type="button" data-logout>退出</button>
+    </nav>
+  </header>
+  <main>
+    <section class="summary">
+      <strong>{{ unread_count }}</strong>
+      <span>条未读 · {{ user.display_name }}</span>
+    </section>
+    <section class="inbox-list" aria-label="通知列表">
+      {% for item in items %}
+      <article class="notification severity-{{ item.severity }}{% if item.state == 'unread' %} unread{% endif %}" data-id="{{ item.id }}">
+        <div class="notification-meta">
+          <span>{{ item.source_app_id }}</span>
+          <time datetime="{{ item.occurred_at.isoformat() }}">{{ item.occurred_at.strftime('%m-%d %H:%M') }}</time>
+        </div>
+        <h2>{{ item.title }}</h2>
+        {% if item.body %}<p>{{ item.body }}</p>{% endif %}
+        <div class="notification-actions">
+          {% if item.resource_uri %}<code>{{ item.resource_uri }}</code>{% endif %}
+          {% if item.state == 'unread' %}<button data-action="read">标记已读</button>{% endif %}
+          <button data-action="archive">归档</button>
+        </div>
+      </article>
+      {% else %}
+      <div class="empty"><strong>暂时没有通知</strong><span>新的提醒、任务结果和系统异常会出现在这里。</span></div>
+      {% endfor %}
+    </section>
+  </main>
+</body>
+</html>

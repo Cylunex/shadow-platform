@@ -4,16 +4,19 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shadow-platform"
-version = "0.4.0"
-description = "Shared identity, media, LLM and agent foundations for Shadow applications"
+version = "0.5.0"
+description = "Shared identity, asset, notification, LLM and agent foundations for Shadow applications"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "alembic>=1.16,<2",
+  "cryptography>=45,<47",
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
+  "jinja2>=3.1,<4",
   "jsonschema>=4.25,<5",
   "pillow>=11,<13",
+  "pyjwt>=2.10,<3",
   "pyyaml>=6,<7",
   "sqlalchemy>=2.0,<3",
   "uvicorn[standard]>=0.35,<1",
@@ -28,8 +31,12 @@ heic = ["pillow-heif>=1,<2"]
 postgres = ["psycopg[binary]>=3.2,<4"]
 s3 = ["boto3>=1.39,<2"]
 
+[project.scripts]
+shadow-notify-web = "notification_service.app:main"
+shadow-notify-worker = "notification_service.worker:main"
+
 [tool.hatch.build.targets.wheel]
-packages = ["media_service", "shadow_sdk", "telemetry_service"]
+packages = ["media_service", "notification_service", "shadow_sdk", "telemetry_service"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

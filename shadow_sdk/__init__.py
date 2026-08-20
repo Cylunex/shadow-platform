@@ -17,6 +17,7 @@ from .llm_client import (
     UsageSink,
 )
 from .media import MediaClient, MediaClientError
+from .notifications import NotificationClient, NotificationClientError, NotificationResult
 from .service_auth import ServiceAuthError, hash_service_token, load_service_token_hashes
 
 __all__ = [
@@ -37,6 +38,9 @@ __all__ = [
     "MediaClient",
     "MediaClientError",
     "NullUsageSink",
+    "NotificationClient",
+    "NotificationClientError",
+    "NotificationResult",
     "ResolvedLLMConfig",
     "RetryPolicy",
     "ServiceAuthError",

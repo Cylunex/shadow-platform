@@ -69,6 +69,7 @@ email           可变联系地址
 
 | 组 | 用途 |
 | --- | --- |
+| `shadow-users` | Shadow 通用个人服务准入 |
 | `shadow-admins` | 平台管理 |
 | `garden-admins` | Garden 管理后台 |
 | `health-users` | Health 页面准入 |

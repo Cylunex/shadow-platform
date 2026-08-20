@@ -19,11 +19,12 @@ install -d -o shadow-platform -g shadow-platform -m 0750 /var/lib/shadow-telemet
 
 若用户或组已经存在，跳过对应的 `groupadd` / `useradd`。应用自己的 outbox flush 模板以 systemd 实例名作为 Linux 用户名，例如 `shadow-travel`，部署前也必须创建该最小权限用户。
 
-创建独立 PostgreSQL 数据库和最小权限用户：`shadow_media`、`shadow_telemetry`。把完整 SQLAlchemy URL 分别写入 `root:shadow-platform 0640` 的：
+创建独立 PostgreSQL 数据库和最小权限用户：`shadow_media`、`shadow_telemetry`、`shadow_notifications`。把完整 SQLAlchemy URL 分别写入 `root:shadow-platform 0640` 的：
 
 ```text
 /etc/shadow-platform/secrets/media-database-url
 /etc/shadow-platform/secrets/telemetry-database-url
+/etc/shadow-platform/secrets/notification-database-url
 ```
 
 上述平台服务秘密文件设为 `root:shadow-platform 0640`。应用原始服务 Token 目录只授权给对应应用用户，不能让其他业务项目读取。
@@ -53,11 +54,20 @@ chmod 0640 /etc/shadow-platform/secrets/apps/shadow-travel/service-token
   --app travel --retire-previous
 ```
 
-另生成至少 32 字节的媒体访问签名密钥并写入 `/etc/shadow-platform/secrets/media-access-signing-key`。平台服务秘密使用 `root:shadow-platform 0640`；每个应用的原始 Token 只对该应用组可读。
+通知服务使用独立的 `notification-token-hashes.json`，其中业务项目只有通知发布权限语义，
+Hermes/OpenClaw 只有 Chat Gateway bridge 权限语义；不要与 Asset 服务 registry 共用。通道
+Token/AppSecret 放在 `/etc/shadow-platform/secrets/channels/`，目录权限 `0750`、文件权限
+`0640`。另生成至少 32 字节的媒体访问签名密钥和通知 session secret，分别写入
+`media-access-signing-key` 与 `notification-session-secret`。平台服务秘密使用
+`root:shadow-platform 0640`；每个应用的原始 Token 只对该应用组可读。
 
 ## 3. 配置和自检
 
-从 `deploy/env/` 复制 `media.env.example`、`telemetry.env.example` 到 `/etc/shadow-platform/`，确认路径、域名和数据库文件正确。再把四个 example registry 复制为实际文件：
+从 `deploy/env/` 复制 `media.env.example`、`telemetry.env.example`、
+`notification.env.example` 到 `/etc/shadow-platform/`，再以
+`notification-channels.yml.example` 创建本机 `/etc/shadow-platform/notification-channels.yml`。
+该文件含真实用户、群和 thread ID，只保留在服务器，不复制回仓库。确认路径、域名和数据库
+文件正确后，再把四个 example registry 复制为实际文件：
 
 ```text
 auth/configuration.yml
@@ -73,6 +83,13 @@ agents/registry.yml
 ```
 
 严格模式会拒绝缺失配置、`REPLACE_WITH` 占位符、Catalog 的无效引用以及缺少的 OIDC 客户端。
+
+首次启动通知服务前执行 migration；生产进程不会自动建表：
+
+```bash
+set -a && . /etc/shadow-platform/notification.env && set +a
+.venv/bin/alembic -c notification_alembic.ini upgrade head
+```
 
 新项目必须先按 `docs/app-integration.md` 登记独立 OIDC client、精确 callback 和准入组，
 再部署应用。不要为新项目安装 Forward Auth snippet 或保留旧密码登录；现有 AuthRequest
@@ -106,18 +123,19 @@ docker run --rm -v /etc/authelia:/config authelia/authelia:4.39.20 \
 
 ## 4. systemd 和 Nginx
 
-复制并调整 `deploy/systemd/` 下的 Media、Telemetry、清理和 outbox flush 单元，然后：
+复制并调整 `deploy/systemd/` 下的 Media、Telemetry、Notifications、清理和 outbox flush 单元，然后：
 
 ```bash
 systemctl daemon-reload
-systemctl enable --now shadow-media shadow-telemetry
-systemctl enable --now shadow-media-cleanup.timer shadow-telemetry-cleanup.timer
+systemctl enable --now shadow-media shadow-telemetry shadow-notifications shadow-notification-worker
+systemctl enable --now shadow-media-cleanup.timer shadow-telemetry-cleanup.timer shadow-notification-cleanup.timer
 systemctl enable --now shadow-llm-usage-flush@shadow-travel.timer
 ```
 
 应用的 LLM 客户端写 `/var/lib/<service>/llm-usage.jsonl`。对应 timer 使用 `deploy/env/llm-telemetry-app.env.example`，每分钟把元数据发送到 `https://media.example.com/platform/telemetry/`。
 
-将 `deploy/nginx/media.example.com.conf.example` 合并到线上配置，执行：
+将 `deploy/nginx/media.example.com.conf.example` 和
+`deploy/nginx/notify.example.com.conf.example` 合并到线上配置，执行：
 
 ```bash
 nginx -t
@@ -141,14 +159,19 @@ curl -fsS http://127.0.0.1:8400/healthz
 curl -fsS http://127.0.0.1:8400/readyz
 curl -fsS http://127.0.0.1:8410/healthz
 curl -fsS http://127.0.0.1:8410/readyz
+curl -fsS http://127.0.0.1:8420/healthz
+curl -fsS http://127.0.0.1:8420/readyz
 systemctl list-timers 'shadow-*'
 ```
 
-再用每个项目的服务 Token 完成一次图片上传、私密访问和一条 LLM metadata 上报，确认跨项目访问返回 404/403。检查 Nginx 日志没有 query token，collector 数据库没有 prompt/response 字段。
+再用每个项目的服务 Token 完成一次图片上传、私密访问、一条 LLM metadata 上报和一条通知
+发布，确认跨项目访问返回 404/403。分别在私聊和群聊验证 Gateway：未配对 sender、未 allowlist
+群、未 mention 均应返回 403，`/ops` 在群聊中必须返回 403。检查 Nginx 日志没有 query token，
+collector 数据库没有 prompt/response 字段，通知库没有 raw chat message。
 
 ## 6. 备份与升级
 
-- 每日备份 Authelia、Media、Telemetry 三个 PostgreSQL 数据库；
+- 每日备份 Authelia、Media、Telemetry、Notifications 四个 PostgreSQL 数据库；
 - 备份 Authelia OIDC 私钥、storage encryption key 和媒体签名密钥；
 - 本地/NAS 对象目录做快照或异机增量备份；
 - 升级前运行全量测试和 `platform_doctor.py --strict`；

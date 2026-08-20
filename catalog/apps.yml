@@ -73,3 +73,17 @@ apps:
     media: true
     llm_models: [chat-default, reasoning-default, vision-default]
     agent_audience: true
+
+  notifications:
+    title: Shadow Notifications
+    owner: example-owner
+    lifecycle: production
+    kind: web
+    canonical_url: https://notify.example.com/
+    auth:
+      mode: oidc
+      groups: [shadow-users]
+    health_path: /healthz
+    media: false
+    llm_models: []
+    agent_audience: false
