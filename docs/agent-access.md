@@ -31,16 +31,15 @@ Registry 不保存原始 Token。使用仓库工具生成高熵 Token，并在 s
 
 ```bash
 .venv/Scripts/python.exe scripts/generate_agent_token.py \
-  --digest-output /etc/shadow-platform/secrets/agents/health-assistant/current-token.sha256
+  --digest-output "$SHADOW_PLATFORM_SECRETS_DIR/agents/health-assistant/current-token.sha256"
 ```
 
 工具只显示一次原始 Token，交给对应 Agent；命令行和摘要文件都不包含原始值。没有 `--force` 时不会覆盖已有摘要。
 
 原始 Token 只交给 Agent，摘要文件放在：
 
-```text
-/etc/shadow-platform/secrets/agents/<agent-id>/current-token.sha256
-```
+`$SHADOW_PLATFORM_SECRETS_DIR/agents/<agent-id>/current-token.sha256`。实际 secrets 根目录由
+仓库外运维配置注入。
 
 用户可见的全局人格不是 Agent principal。统一 Harness 应按目标项目持有多份最小权限凭据，
 不要登记一个横跨所有 audience 的万能 Token。
@@ -50,11 +49,13 @@ Registry 不保存原始 Token。使用仓库工具生成高熵 Token，并在 s
 每个项目启动时构造本地验证器：
 
 ```python
+import os
+
 from shadow_sdk.agent import AgentAuthenticator
 
 authenticator = AgentAuthenticator(
-    "/etc/shadow-platform/agents/registry.yml",
-    secrets_dir="/etc/shadow-platform/secrets",
+    os.environ["SHADOW_AGENT_REGISTRY_FILE"],
+    secrets_dir=os.environ["SHADOW_PLATFORM_SECRETS_DIR"],
     audience="health",
 )
 identity = authenticator.authenticate(request.headers.get("Authorization", ""))

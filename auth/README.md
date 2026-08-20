@@ -17,7 +17,7 @@
 
 1. 按部署时锁定的 Authelia 版本校验并更新 `configuration.yml.example`。
 2. 生成 Argon2 用户密码哈希，复制模板为不入库的 `users_database.yml`。
-3. 在 `/etc/shadow-platform/secrets/` 创建全部密钥文件。
+3. 在仓库外运维中心配置的 secrets 根目录创建全部密钥文件。
 4. 为每个应用生成独立 client ID、client secret 和精确 redirect URI。
 5. 将文件通知器替换为 SMTP；文件通知器只能用于首次旁路验证。
 6. 执行 Authelia 配置校验，再允许 Nginx 转发公网流量。

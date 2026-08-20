@@ -39,7 +39,7 @@ Media 与 Telemetry 共用服务 Token 摘要 registry，每个应用最多同�
 
 ## 密钥
 
-生产密钥放在 `/etc/shadow-platform/secrets/`，按服务划分 Unix 用户/组并只授予所需读权限。单进程独占文件通常使用 `0600`；平台服务共享摘要使用 `root:shadow-platform 0640`。容器通过只读 volume 和 `*_FILE` 变量读取。仓库中的 `secrets/README.md` 只描述名称，不存值。
+生产密钥放在仓库外运维中心配置的 secrets 根目录，按服务划分 Unix 用户/组并只授予所需读权限。单进程独占文件通常使用 `0600`；跨进程共享摘要使用专用组和 `0640`。容器通过只读 volume 和 `*_FILE` 变量读取。仓库中的 `secrets/README.md` 只描述名称，不存值。
 
 需要备份且不可随意重建的密钥：
 

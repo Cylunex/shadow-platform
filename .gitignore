@@ -27,4 +27,9 @@ auth/oidc-clients.yml
 *.p12
 *.pfx
 docs/private/
-deploy/local/
+
+# Real deployment and operations material is maintained outside the repository.
+deploy/
+ops/
+operations/
+config/*.local.*

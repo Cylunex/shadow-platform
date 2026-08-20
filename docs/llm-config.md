@@ -16,9 +16,9 @@ Shadow Platform 统一模型别名、供应商 Base URL、密钥文件、客户�
 `llm/registry.yml` 只保存非敏感配置。供应商密钥保存在 secrets 目录，并优先按项目隔离：
 
 ```text
-/etc/shadow-platform/secrets/llm/health/primary-api-key
-/etc/shadow-platform/secrets/llm/foliant/primary-api-key
-/etc/shadow-platform/secrets/llm/travel/primary-api-key
+$SHADOW_PLATFORM_SECRETS_DIR/llm/health/primary-api-key
+$SHADOW_PLATFORM_SECRETS_DIR/llm/foliant/primary-api-key
+$SHADOW_PLATFORM_SECRETS_DIR/llm/travel/primary-api-key
 ```
 
 业务代码引用 `chat-default`、`reasoning-default`、`vision-default` 等稳定别名。别名解析为：
@@ -40,14 +40,16 @@ SDK 不翻译请求正文，因此 fallback 必须使用相同 `api`。这能避
 `create()` 接收供应商原生参数；`model` 和 `stream` 由 SDK 管理，不能在正文里覆盖。
 
 ```python
+import os
+
 from shadow_sdk import JsonlUsageSink, LLMClient
 
 with LLMClient.from_registry(
-    "/etc/shadow-platform/llm/registry.yml",
-    secrets_dir="/etc/shadow-platform/secrets",
+    os.environ["SHADOW_LLM_REGISTRY_FILE"],
+    secrets_dir=os.environ["SHADOW_PLATFORM_SECRETS_DIR"],
     app_id="travel",
     alias="chat-default",
-    usage_sink=JsonlUsageSink("/var/lib/shadow-travel/llm-usage.jsonl"),
+    usage_sink=JsonlUsageSink(os.environ["SHADOW_LLM_USAGE_OUTBOX"]),
 ) as client:
     response = client.create(
         request_id="travel-plan-019",
@@ -107,17 +109,17 @@ cached_tokens, retry_count, streamed, started_at
 
 字段契约见 `contracts/llm-usage-event.schema.json`。`telemetry_service` 按 `(app_id, request_id)` 幂等入库，并通过 `/v1/llm-usage/summary` 提供当前应用自己的 Token、延迟和状态聚合。
 
-## 部署时渲染
+## 配置渲染
 
 已有项目仍可只使用配置解析器或部署期 env：
 
 ```bash
 .venv/Scripts/python.exe scripts/render_llm_env.py \
   --registry llm/registry.yml \
-  --secrets-dir /etc/shadow-platform/secrets \
+  --secrets-dir "$SHADOW_PLATFORM_SECRETS_DIR" \
   --app health \
   --binding CHAT=chat-default \
-  --output /etc/shadow/health/llm.env
+  --output "$SHADOW_LLM_RENDER_OUTPUT"
 ```
 
 输出包含 provider、protocol、api、Base URL、model、超时、fallback 和密钥文件路径，不包含密钥值。浏览器与 ShadowApp 永远不能读取这些文件。

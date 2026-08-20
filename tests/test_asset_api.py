@@ -133,7 +133,7 @@ def test_upload_session_advertises_local_targets_and_exact_cors(tmp_path):
     client, _ = make_client(
         tmp_path,
         asset_upload_base_urls=(
-            "http://nas.example.test:55080/platform/assets",
+            "http://nas.example.test:18080/platform/assets",
             "https://assets-lan.example.test",
         ),
         asset_cors_origins=("https://garden.example.test",),
@@ -160,7 +160,7 @@ def test_upload_session_advertises_local_targets_and_exact_cors(tmp_path):
             "alternate-2",
         ]
         assert payload["alternate_targets"][0]["url"].startswith(
-            "http://nas.example.test:55080/platform/assets/"
+            "http://nas.example.test:18080/platform/assets/"
         )
         assert payload["alternate_targets"][0]["headers"] == payload["target"]["headers"]
 
@@ -180,7 +180,7 @@ def test_insecure_upload_target_requires_explicit_opt_in(tmp_path):
     with pytest.raises(ValueError, match="must use HTTPS"):
         make_client(
             tmp_path,
-            asset_upload_base_urls=("http://nas.example.test:55080/platform/assets",),
+            asset_upload_base_urls=("http://nas.example.test:18080/platform/assets",),
         )
 
 
