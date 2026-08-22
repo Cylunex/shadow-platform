@@ -1,0 +1,7 @@
+version: 1
+audience: conformance
+scopes:
+  - conformance.records.read
+  - conformance.drafts.create
+  - conformance.records.apply
+  - conformance.records.publish

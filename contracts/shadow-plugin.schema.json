@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-plugin-v0.1.json",
+  "title": "Shadow Plugin Definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "shadow.cylunex/v1alpha1" },
+    "kind": { "enum": ["ShadowDomainPlugin", "ShadowCompositionPlugin"] },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "display_name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "$ref": "#/$defs/semver" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compatibility", "descriptors"],
+      "properties": {
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shadow_plugin_api"],
+          "properties": {
+            "shadow_plugin_api": { "const": "v1alpha1" },
+            "dsh": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["distribution", "tools_api"],
+              "properties": {
+                "distribution": { "$ref": "#/$defs/semver_requirement" },
+                "tools_api": { "$ref": "#/$defs/semver_requirement" }
+              }
+            }
+          }
+        },
+        "descriptors": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["agent"],
+          "properties": {
+            "app": { "$ref": "#/$defs/relative_path" },
+            "agent": { "$ref": "#/$defs/relative_path" },
+            "events": { "$ref": "#/$defs/relative_path" },
+            "resources": { "$ref": "#/$defs/relative_path" },
+            "captures": { "$ref": "#/$defs/relative_path" },
+            "confirmations": { "$ref": "#/$defs/relative_path" },
+            "permissions": { "$ref": "#/$defs/relative_path" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "semver_requirement": {
+      "type": "string",
+      "maxLength": 80,
+      "pattern": "^(?:(?:>=|<=|>|<|=)?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?)(?: (?:(?:>=|<=|>|<|=)?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?))*$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    }
+  }
+}

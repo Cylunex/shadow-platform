@@ -1,6 +1,6 @@
-version: 1
+version: 2
 app_id: travel
-package_version: 1.0.0
+package_version: 2.0.0
 
 # 这是领域项目中 agent/manifest.yaml 的合同示例，不是 Platform 托管的业务能力清单。
 skills:
@@ -10,22 +10,43 @@ skills:
     capabilities:
       - travel.maps.read
       - travel.drafts.create
+    invocation:
+      model: true
+      user: true
 
 capabilities:
   - id: travel.maps.read
-    summary: 读取用户明确授权给当前 Agent 的最小化地图上下文
+    summary: 读取用户明确授权给当前 Shadow Profile 的最小化地图上下文
     audience: travel
     scopes: [travel.maps.read]
     tools:
       - name: travel.maps.list
         transport: http
-        operation: GET /api/machine/v1/agent/maps
+        contract_ref: contracts/agent.openapi.yaml
+        operation_id: list_agent_maps
+        exposure: on-demand
+        result_mode: summary
+        max_result_bytes: 16384
+        max_model_chars: 4000
+        timeout_ms: 10000
+        concurrency_safe: true
+        retry_policy: idempotent
       - name: travel.maps.get
         transport: http
-        operation: GET /api/machine/v1/agent/maps/{map_id}
+        contract_ref: contracts/agent.openapi.yaml
+        operation_id: get_agent_map
+        exposure: on-demand
+        result_mode: summary
+        max_result_bytes: 16384
+        max_model_chars: 4000
+        timeout_ms: 10000
+        concurrency_safe: true
+        retry_policy: idempotent
     effect: read
     data_classification: personal
-    confirmation: never
+    risk_level: L0
+    confirmation: none
+    reversible: true
     resource_grant_required: true
     idempotency_required: false
 
@@ -36,9 +57,19 @@ capabilities:
     tools:
       - name: travel.drafts.create
         transport: http
-        operation: POST /api/machine/v1/agent/maps/{map_id}/drafts
+        contract_ref: contracts/agent.openapi.yaml
+        operation_id: create_agent_draft
+        exposure: on-demand
+        result_mode: reference
+        max_result_bytes: 8192
+        max_model_chars: 1200
+        timeout_ms: 15000
+        concurrency_safe: false
+        retry_policy: idempotent
     effect: draft
     data_classification: personal
-    confirmation: before-apply
+    risk_level: L1
+    confirmation: notify
+    reversible: true
     resource_grant_required: true
     idempotency_required: true

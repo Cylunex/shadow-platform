@@ -1,0 +1,3 @@
+version: 1
+schemes:
+  - shadow://conformance/records/{record_id}

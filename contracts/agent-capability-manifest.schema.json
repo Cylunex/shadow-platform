@@ -1,17 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/shadow-agent-capability-manifest-v1.json",
+  "$id": "https://example.com/schemas/shadow-agent-capability-manifest-v2.json",
   "title": "Shadow Agent Capability Manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "app_id", "package_version", "skills", "capabilities"],
   "properties": {
-    "version": { "const": 1 },
+    "version": { "const": 2 },
     "app_id": { "$ref": "#/$defs/id" },
-    "package_version": {
-      "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
-    },
+    "package_version": { "$ref": "#/$defs/semver" },
     "skills": {
       "type": "array",
       "minItems": 1,
@@ -32,6 +29,10 @@
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
     },
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
     "relative_path": {
       "type": "string",
       "minLength": 1,
@@ -50,22 +51,51 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/qualified_id" }
+        },
+        "invocation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "user"],
+          "properties": {
+            "model": { "type": "boolean" },
+            "user": { "type": "boolean" }
+          }
         }
       }
     },
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "transport", "operation"],
+      "required": [
+        "name",
+        "transport",
+        "contract_ref",
+        "operation_id",
+        "exposure",
+        "result_mode",
+        "max_result_bytes",
+        "max_model_chars",
+        "timeout_ms",
+        "concurrency_safe",
+        "retry_policy"
+      ],
       "properties": {
         "name": { "$ref": "#/$defs/qualified_id" },
-        "transport": { "enum": ["http", "mcp", "local"] },
-        "operation": {
+        "transport": { "enum": ["http", "mcp"] },
+        "contract_ref": { "$ref": "#/$defs/relative_path" },
+        "operation_id": {
           "type": "string",
           "minLength": 1,
           "maxLength": 160,
-          "pattern": "^[A-Za-z0-9_.:/{} -]+$"
-        }
+          "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+        },
+        "exposure": { "enum": ["always", "on-demand", "hidden"] },
+        "result_mode": { "enum": ["full", "summary", "reference"] },
+        "max_result_bytes": { "type": "integer", "minimum": 256, "maximum": 1048576 },
+        "max_model_chars": { "type": "integer", "minimum": 128, "maximum": 100000 },
+        "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 300000 },
+        "concurrency_safe": { "type": "boolean" },
+        "retry_policy": { "enum": ["never", "idempotent"] }
       }
     },
     "capability": {
@@ -79,7 +109,9 @@
         "tools",
         "effect",
         "data_classification",
+        "risk_level",
         "confirmation",
+        "reversible",
         "resource_grant_required",
         "idempotency_required"
       ],
@@ -98,13 +130,15 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/tool" }
         },
-        "effect": { "enum": ["read", "draft", "write", "delete"] },
+        "effect": {
+          "enum": ["read", "analyze", "draft", "write", "delete", "publish", "execute", "export", "permission"]
+        },
         "data_classification": {
-          "enum": ["public", "internal", "personal", "sensitive"]
+          "enum": ["public", "internal", "personal", "sensitive", "restricted"]
         },
-        "confirmation": {
-          "enum": ["never", "before-execute", "before-apply", "always"]
-        },
+        "risk_level": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+        "confirmation": { "enum": ["none", "notify", "policy", "explicit", "elevated"] },
+        "reversible": { "type": "boolean" },
         "resource_grant_required": { "type": "boolean" },
         "idempotency_required": { "type": "boolean" }
       }

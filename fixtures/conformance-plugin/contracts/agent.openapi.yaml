@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: Shadow Conformance Agent API
+  version: 0.1.0
+paths:
+  /api/agent/records/{record_id}:
+    get:
+      operationId: get_record
+      parameters:
+        - name: record_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Record summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResult"
+  /api/agent/drafts:
+    post:
+      operationId: create_draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DraftInput"
+      responses:
+        "201":
+          description: Draft reference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceResult"
+  /api/agent/records/{record_id}/apply:
+    post:
+      operationId: apply_record
+      parameters:
+        - name: record_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Applied record reference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceResult"
+  /api/agent/records/{record_id}/publish:
+    post:
+      operationId: publish_record
+      parameters:
+        - name: record_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published record reference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceResult"
+components:
+  schemas:
+    DraftInput:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+    SummaryResult:
+      type: object
+      additionalProperties: false
+      required: [summary, resource_uri]
+      properties:
+        summary:
+          type: string
+        resource_uri:
+          type: string
+    ReferenceResult:
+      type: object
+      additionalProperties: false
+      required: [resource_uri]
+      properties:
+        resource_uri:
+          type: string
+        revision:
+          type: string

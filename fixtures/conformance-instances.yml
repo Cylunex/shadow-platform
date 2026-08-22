@@ -1,0 +1,10 @@
+version: 1
+instances:
+  conformance-test:
+    plugin_id: shadow-conformance
+    plugin_version: 0.1.0
+    environment: test
+    base_url_env: SHADOW_CONFORMANCE_BASE_URL
+    credential_env: SHADOW_CONFORMANCE_TOKEN
+    health_path: /healthz
+    enabled: true

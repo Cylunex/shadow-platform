@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-plugin-instance-v1.json",
+  "title": "Shadow Plugin Instance Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "instances"],
+  "properties": {
+    "version": { "const": 1 },
+    "instances": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/instance" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "env_name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,127}$" },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plugin_id",
+        "plugin_version",
+        "environment",
+        "base_url_env",
+        "credential_env",
+        "enabled"
+      ],
+      "properties": {
+        "plugin_id": { "$ref": "#/$defs/id" },
+        "plugin_version": { "$ref": "#/$defs/semver" },
+        "environment": { "enum": ["development", "test", "production"] },
+        "base_url_env": { "$ref": "#/$defs/env_name" },
+        "credential_env": { "$ref": "#/$defs/env_name" },
+        "health_path": {
+          "type": "string",
+          "pattern": "^/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$"
+        },
+        "enabled": { "type": "boolean" }
+      }
+    }
+  }
+}

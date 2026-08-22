@@ -7,15 +7,15 @@
 
 Shadow 统一的是 Agent 的入口和控制面，不集中业务智能，也不部署 Agent Gateway：
 
-- 用户可以只面对一个全局人格（例如 Nyx）；
+- 用户只面对统一的 Shadow 人格；
 - Health、Travel、Foliant、Garden、Verse 等项目拥有自己的领域能力包；
-- Platform 统一身份、能力合同、路由策略、跨项目工作流和 Harness 装载；
+- Platform 作为 Agent Control Plane，统一身份、插件合同、Profile 策略和 Harness Bundle；
 - Harness 使用项目级凭据直接调用项目 API/MCP，Platform 不转发调用；
 - LLM 仍由项目内 SDK 直连供应商，Platform 不接触 Prompt、工具参数或回答。
 
 ```mermaid
 flowchart TD
-    U["用户 / ShadowApp"] --> H["Hermes / OpenClaw / 其他 Harness"]
+    U["用户 / ShadowApp"] --> H["DSH / Hermes / OpenClaw"]
     H --> P["全局人格、路由与策略"]
     P --> HS["Health 领域能力包"]
     P --> TS["Travel 领域能力包"]
@@ -48,17 +48,14 @@ agent/
 Platform 维护：
 
 ```text
-agent/
-├── persona/       # 全局人格和表达风格，不含领域规则
-├── routing/       # 意图到 capability id 的路由
-├── workflows/     # 跨项目工作流
-├── policies/      # 全局确认、隐私和工具调用策略
-└── adapters/      # Hermes、OpenClaw 等 Harness 的薄适配
+contracts/         # 插件、能力、Profile 和运行时公共合同
+agents/            # principal、实例与 Profile 示例
+scripts/           # 校验器和 Bundle Builder
+docs/              # 控制面规范与接入边界
 ```
 
-上述 Platform 目录是目标结构，只有出现真实内容时才创建。不得用空目录或占位 Prompt 提前
-构造框架。单项目工作流仍留在所属项目，只有同时消费两个及以上项目能力的流程才进入
-`workflows/`。
+Platform 不拥有跨项目业务 Prompt。单项目工作流留在所属项目；同时消费两个及以上领域能力
+的流程使用独立 `ShadowCompositionPlugin`，由 Platform 注册和构建，但不进入 Platform 核心。
 
 ## 3. 四类注册信息
 
@@ -90,7 +87,7 @@ Prompt 或 Skill 只能收紧这些要求，不能降低服务端实际权限检
 
 ## 4. 身份、人格与授权
 
-Nyx 是用户可见人格，不等于一个拥有全部权限的机器主体。运行时应为每个领域配置独立
+Shadow 是用户可见人格，不等于一个拥有全部权限的机器主体。运行时应为每个领域配置独立
 Agent principal 和凭据，例如 Health、Travel、Foliant 各一份；Harness 根据目标 audience
 选择凭据。不要创建一个可访问所有项目的万能 Token。
 
@@ -110,24 +107,26 @@ Agent principal 和凭据，例如 Health、Travel、Foliant 各一份；Harness
 ## 5. 运行时聚合
 
 源码不复制到统一 Agent 仓库。Platform 构建器读取各项目 Manifest，校验文件与能力引用，
-再为目标 Harness 生成不可变运行时包：
+再为目标 Harness 生成不可变运行时包。DSH 首期使用一份通用 Adapter Bundle，各领域只是
+生成配置实例，不分别发布 npm 包：
 
 ```text
 领域仓库 agent/skills
         ↓ schema 与语义校验
 Platform bundle builder
         ↓ 原子发布
-runtime/
-├── skills/
-│   ├── health-*/
-│   ├── travel-*/
-│   └── foliant-*/
-├── manifests/
+generated-profile/
+├── domain.js
+├── policy.js
+├── runtime.js
+├── profile.generated.js
+├── skills/                 # 经校验的只读快照
+├── shadow-runtime-manifest.json
 └── agent-bundle.lock
 ```
 
-`agent-bundle.lock` 应记录项目、Git 提交、Manifest 版本、Skill 文件摘要、目标 Harness 和
-生成时间。运行时目录不得反向成为源码；任何修改必须回到领域仓库。Windows、NAS 和容器间
+`agent-bundle.lock` 记录项目与实例版本、Manifest/Skill/合同输入摘要、精确 Runtime 版本和
+确定性 build id。运行时目录不得反向成为源码；任何修改必须回到领域仓库。Windows、NAS 和容器间
 为避免软链接差异，发布使用临时目录生成、校验后原子切换，而不是就地覆盖。
 
 Harness adapter 只处理目录结构、元数据格式和工具名称映射，不复制领域 Prompt，也不改变
@@ -215,7 +214,7 @@ Platform 负责：
 - 跨项目最小披露、确认传播和失败恢复；
 - Prompt Injection 不得提升权限或切换到其他项目凭据。
 
-统一 Agent 首期验收不是“所有项目都能聊天”，而是：一个 Harness 能发现两个以上领域包，
+统一 Agent 首期验收不是“所有项目都能聊天”，而是：一个 Harness 能发现两个以上领域能力，
 使用彼此独立的凭据直接调用项目，正确拒绝越权，并完成至少一个只读跨项目工作流。
 
 ## 11. 现有独立 Agent 仓库迁移

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-agent-profile-v1.json",
+  "title": "Shadow Agent Runtime Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "id", "runtime", "plugins", "policy", "budgets"],
+  "properties": {
+    "version": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "distribution_version", "tools_api_version"],
+      "properties": {
+        "kind": { "const": "dsh" },
+        "distribution_version": { "$ref": "#/$defs/semver" },
+        "tools_api_version": { "$ref": "#/$defs/semver" }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plugin_id", "instance_id", "capabilities"],
+        "properties": {
+          "plugin_id": { "$ref": "#/$defs/id" },
+          "instance_id": { "$ref": "#/$defs/id" },
+          "capabilities": {
+            "oneOf": [
+              { "const": "*" },
+              {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/qualified_id" }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preauthorized_capabilities", "allow_elevated"],
+      "properties": {
+        "preauthorized_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/qualified_id" }
+        },
+        "allow_elevated": { "type": "boolean" }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_tool_catalog_chars", "max_skill_catalog_chars"],
+      "properties": {
+        "max_tool_catalog_chars": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1000000
+        },
+        "max_skill_catalog_chars": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 1000000
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "qualified_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+    }
+  }
+}

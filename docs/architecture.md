@@ -9,7 +9,7 @@ Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，并�
 
 - Garden、Health、Stock、Travel 的业务数据；
 - 地图成员、文章编辑者、健康记录所有者等资源级权限；
-- Agent/MCP 的长期 API Token 生命周期；
+- 领域 Agent/MCP 请求转发和业务执行；
 - ShadowVerse、Wingman 等纯 CLI/Skill 项目的登录。
 
 ## 2. 逻辑结构
@@ -171,13 +171,15 @@ sequenceDiagram
 ## 10. Agent 控制面
 
 平台不部署 Agent Gateway。Agent registry 统一 `agent_id`、负责人项目、audience、scopes、
-禁用状态和 Token 摘要文件。各应用通过共享 SDK 在本地验证 Bearer Token，并继续由自己的
-API/MCP 层检查资源权限、幂等和审计。
+禁用状态和 Token 摘要文件。Shadow Plugin Registry 管理远程插件实例，Agent Profile 选择
+每个运行时实际装载的实例、能力和预授权策略。各应用通过共享 SDK 在本地验证 Bearer Token，
+并继续由自己的 API/MCP 层检查资源权限、幂等和审计。
 
 统一 Agent 采用控制面与数据面分离：
 
-- Platform 管理全局人格、能力合同、路由、跨项目工作流和 Harness adapter；
+- Platform 管理能力合同、插件实例、Profile 策略和 Harness adapter；
 - 各项目管理领域 Skill、Prompt、工具实现和 evals；
+- 跨项目业务流程属于独立 Composition Plugin，不进入 Platform 核心；
 - Harness 在部署时装载各项目能力包，并使用目标项目的独立凭据直接调用；
 - 一个用户可见人格不对应一个全权限 Token，项目凭据不能互相替代。
 

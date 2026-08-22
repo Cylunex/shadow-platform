@@ -1,0 +1,19 @@
+version: 1
+id: shadow-general
+runtime:
+  kind: dsh
+  distribution_version: 0.1.1-rc.2
+  tools_api_version: 0.1.1-rc.2
+plugins:
+  - plugin_id: shadow-travel
+    instance_id: travel-production
+    capabilities: "*"
+  - plugin_id: shadow-archive
+    instance_id: archive-production
+    capabilities: "*"
+policy:
+  preauthorized_capabilities: []
+  allow_elevated: false
+budgets:
+  max_tool_catalog_chars: 60000
+  max_skill_catalog_chars: 12000

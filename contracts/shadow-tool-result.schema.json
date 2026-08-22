@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-tool-result-v1.json",
+  "title": "Shadow Tool Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "kind", "summary", "meta"],
+  "properties": {
+    "version": { "const": 1 },
+    "kind": { "enum": ["inline", "resource", "proposal", "continuation"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 6000 },
+    "data": true,
+    "resource_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/resource_ref" }
+    },
+    "proposal": { "$ref": "#/$defs/proposal" },
+    "continuation": { "$ref": "#/$defs/continuation" },
+    "meta": { "$ref": "#/$defs/meta" }
+  },
+  "oneOf": [
+    {
+      "properties": { "kind": { "const": "inline" } },
+      "required": ["data"]
+    },
+    {
+      "properties": { "kind": { "const": "resource" } },
+      "required": ["resource_refs"]
+    },
+    {
+      "properties": { "kind": { "const": "proposal" } },
+      "required": ["proposal"]
+    },
+    {
+      "properties": { "kind": { "const": "continuation" } },
+      "required": ["continuation"]
+    }
+  ],
+  "$defs": {
+    "resource_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "pattern": "^shadow://[a-z][a-z0-9-]{1,63}/[^\\s]+$"
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "media_type": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "receipt_required"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "receipt_required": { "type": "boolean" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token"],
+      "properties": {
+        "token": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "next_tool": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sensitivity", "truncated", "provenance"],
+      "properties": {
+        "sensitivity": {
+          "enum": ["public", "internal", "personal", "sensitive", "restricted"]
+        },
+        "truncated": { "type": "boolean" },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["plugin_id", "capability_id"],
+          "properties": {
+            "plugin_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+            "capability_id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+            },
+            "request_id": { "type": "string", "minLength": 1, "maxLength": 160 }
+          }
+        },
+        "audit_ref": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    }
+  }
+}

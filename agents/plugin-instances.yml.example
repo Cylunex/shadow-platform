@@ -1,0 +1,18 @@
+version: 1
+instances:
+  travel-production:
+    plugin_id: shadow-travel
+    plugin_version: 1.0.0
+    environment: production
+    base_url_env: SHADOW_TRAVEL_BASE_URL
+    credential_env: SHADOW_TRAVEL_AGENT_TOKEN
+    health_path: /healthz
+    enabled: true
+  archive-production:
+    plugin_id: shadow-archive
+    plugin_version: 1.0.0
+    environment: production
+    base_url_env: SHADOW_ARCHIVE_BASE_URL
+    credential_env: SHADOW_ARCHIVE_AGENT_TOKEN
+    health_path: /healthz
+    enabled: true

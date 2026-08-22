@@ -1,0 +1,17 @@
+version: 1
+id: shadow-conformance
+runtime:
+  kind: dsh
+  distribution_version: 0.1.1-rc.2
+  tools_api_version: 0.1.1-rc.2
+plugins:
+  - plugin_id: shadow-conformance
+    instance_id: conformance-test
+    capabilities: "*"
+policy:
+  preauthorized_capabilities:
+    - conformance.records.apply
+  allow_elevated: false
+budgets:
+  max_tool_catalog_chars: 20000
+  max_skill_catalog_chars: 4000

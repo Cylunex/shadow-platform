@@ -1,0 +1,4 @@
+version: 1
+events:
+  - type: conformance.record.created
+    schema_version: 1

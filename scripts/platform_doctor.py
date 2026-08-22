@@ -10,6 +10,11 @@ import jsonschema
 import yaml
 
 from shadow_sdk.catalog import CatalogError, load_app_catalog
+from shadow_sdk.plugin_contracts import (
+    PluginContractError,
+    validate_capability_semantics,
+    validate_plugin,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +51,16 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             "Agent capability manifest schema",
             root / "agents" / "capability-manifest.yml.example",
             root / "contracts" / "agent-capability-manifest.schema.json",
+        ),
+        (
+            "Shadow plugin instance schema",
+            root / "agents" / "plugin-instances.yml.example",
+            root / "contracts" / "shadow-plugin-instance.schema.json",
+        ),
+        (
+            "Agent profile schema",
+            root / "agents" / "profiles" / "shadow-general.yml.example",
+            root / "contracts" / "agent-profile.schema.json",
         ),
     )
     loaded: dict[str, dict[str, Any]] = {}
@@ -99,6 +114,19 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             "Agent capability contracts",
             "fail" if capability_errors else "pass",
             ", ".join(capability_errors) if capability_errors else "skills and capabilities valid",
+        )
+    )
+
+    try:
+        validate_plugin(root / "fixtures" / "conformance-plugin", root)
+        conformance_error = None
+    except PluginContractError as exc:
+        conformance_error = str(exc)
+    results.append(
+        CheckResult(
+            "Shadow plugin conformance fixture",
+            "fail" if conformance_error else "pass",
+            conformance_error or "definition, descriptors, skills and tools valid",
         )
     )
 
@@ -229,19 +257,8 @@ def _validate_capability_manifest(
 ) -> list[str]:
     if not manifest:
         return []
-    errors: list[str] = []
+    errors = validate_capability_semantics(manifest)
     capability_items = manifest.get("capabilities", [])
-    capability_ids = [item.get("id") for item in capability_items]
-    if len(capability_ids) != len(set(capability_ids)):
-        errors.append("duplicate capability ids")
-    known_capabilities = set(capability_ids)
-    skill_ids = [item.get("id") for item in manifest.get("skills", [])]
-    if len(skill_ids) != len(set(skill_ids)):
-        errors.append("duplicate skill ids")
-    for skill in manifest.get("skills", []):
-        unknown = sorted(set(skill.get("capabilities", [])) - known_capabilities)
-        if unknown:
-            errors.append(f"{skill.get('id')}:unknown={unknown}")
     manifest_app_id = manifest.get("app_id")
     if manifest_app_id not in catalog:
         errors.append(f"unknown app_id={manifest_app_id}")
@@ -259,15 +276,6 @@ def _validate_capability_manifest(
         )
         if agents and not covered:
             errors.append(f"{capability_id}:no-principal-covers-scopes")
-        effect = capability.get("effect")
-        confirmation = capability.get("confirmation")
-        idempotent = capability.get("idempotency_required")
-        if effect in {"write", "delete"} and confirmation == "never":
-            errors.append(f"{capability_id}:write-without-confirmation")
-        if effect in {"draft", "write", "delete"} and idempotent is not True:
-            errors.append(f"{capability_id}:mutation-without-idempotency")
-        if effect == "delete" and confirmation != "always":
-            errors.append(f"{capability_id}:delete-without-always-confirm")
     return errors
 
 

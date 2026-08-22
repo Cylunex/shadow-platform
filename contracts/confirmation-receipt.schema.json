@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-confirmation-receipt-v1.json",
+  "title": "Shadow Confirmation Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "receipt_id",
+    "issuer",
+    "actor",
+    "audience",
+    "plugin_id",
+    "capability_id",
+    "tool_name",
+    "effect",
+    "arguments_sha256",
+    "issued_at",
+    "expires_at",
+    "nonce",
+    "single_use",
+    "signature"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "receipt_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "issuer": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "actor": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "audience": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "plugin_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "capability_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+    },
+    "tool_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+    },
+    "effect": {
+      "enum": ["write", "delete", "publish", "execute", "export", "permission"]
+    },
+    "arguments_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "resource_uri": {
+      "type": "string",
+      "pattern": "^shadow://[a-z][a-z0-9-]{1,63}/[^\\s]+$"
+    },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "nonce": { "type": "string", "minLength": 16, "maxLength": 256 },
+    "single_use": { "const": true },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": { "enum": ["EdDSA", "ES256"] },
+        "key_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "value": { "type": "string", "minLength": 32, "maxLength": 2048 }
+      }
+    }
+  }
+}

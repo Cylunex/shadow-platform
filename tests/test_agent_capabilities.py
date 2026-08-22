@@ -37,11 +37,22 @@ def test_capability_manifest_semantics_reject_unsafe_mutation_and_unknown_refere
     _, manifest, registry, catalog = _published_documents()
     manifest["skills"][0]["capabilities"].append("travel.unknown.write")
     manifest["capabilities"][1].update(
-        effect="write", confirmation="never", idempotency_required=False
+        effect="write", risk_level="L1", confirmation="none", idempotency_required=False
     )
 
     errors = _validate_capability_manifest(manifest, catalog, registry["agents"])
 
     assert any("unknown" in error for error in errors)
-    assert any("write-without-confirmation" in error for error in errors)
+    assert any("confirmation-does-not-match" in error for error in errors)
     assert any("mutation-without-idempotency" in error for error in errors)
+
+
+def test_capability_manifest_semantics_reject_high_impact_low_risk():
+    _, manifest, registry, catalog = _published_documents()
+    manifest["capabilities"][1].update(
+        effect="publish", risk_level="L1", confirmation="notify"
+    )
+
+    errors = _validate_capability_manifest(manifest, catalog, registry["agents"])
+
+    assert any("high-impact-risk-too-low" in error for error in errors)

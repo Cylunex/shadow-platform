@@ -18,17 +18,17 @@ Shadow Platform 是 Shadow 系列的共享基础设施层。它统一身份、�
 - Asset/Media 文件、去重、版本、引用和生命周期；
 - Notifications 收件箱、TG/QQ/飞书投递与运维状态；
 - LLM 配置 SDK 和脱敏用量元数据；
-- Agent principal、能力清单与最小权限验证；
+- Shadow Plugin 合同、Agent Profile、DSH Bundle 构建与最小权限验证；
 - Shadow SDK、接口合同和配置自检工具。
 
 ## 本地验证
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m ruff check .
-.venv/bin/python -m pytest -q
-.venv/bin/python scripts/platform_doctor.py
+.venv/Scripts/python.exe -m pip install -e '.[dev]'
+.venv/Scripts/python.exe -m ruff check .
+.venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe scripts/platform_doctor.py
 ```
 
 ## 文档
@@ -38,4 +38,7 @@ python -m venv .venv
 - [Asset v1](docs/asset-service-v1.md)
 - [通知与收件箱](docs/notifications.md)
 - [统一 Agent](docs/unified-agent.md)
+- [Shadow Plugin Specification](docs/shadow-plugin-spec.md)
+- [DeepSeek Harness 接入](docs/dsh-integration.md)
+- [领域项目插件化接入清单](docs/domain-plugin-onboarding.md)
 - [安全边界](docs/security.md)
