@@ -140,6 +140,11 @@ Composition 采用经过 Schema 校验的顺序步骤，只能引用当前 Profi
 `compositions/shadow-daily-overview`，组合 Health 与 Ledger 摘要，不保存领域正文。写入编排、
 并行 DAG、补偿事务和持久队列仍不属于这一版。
 
+`agents/profiles/shadow-nexus.yml.example` 是统一 Web 工作台的组合边界：Health 与 Ledger 仍是
+两个独立插件实例、两组独立 Bearer 凭据和两套资源授权。Nexus Browser 插件不持有凭据；Host
+侧只从部署环境读取与 Builder 相同的 `SHADOW_HEALTH_*`、`SHADOW_LEDGER_*` 变量。摘要读取为
+L0，草稿创建为可撤销 L1；Nexus Review 的“确认”只创建领域草稿，不等价于领域事实确认。
+
 正式 Profile 不安装 Dynamic Extension 或外部市场入口。这里通过 Profile 包组成和内部
 allowlist 实现，而不是依赖尚未验证的假定配置字段。领域不可用不会阻止 Adapter 注册，失败
 只发生在对应 Tool 调用；构建期合同错误则在发布前整体拒绝。

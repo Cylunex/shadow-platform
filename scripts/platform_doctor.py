@@ -67,6 +67,11 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             root / "agents" / "profiles" / "shadow-daily-overview.yml.example",
             root / "contracts" / "agent-profile.schema.json",
         ),
+        (
+            "Nexus profile schema",
+            root / "agents" / "profiles" / "shadow-nexus.yml.example",
+            root / "contracts" / "agent-profile.schema.json",
+        ),
     )
     loaded: dict[str, dict[str, Any]] = {}
     for name, document_path, schema_path in documents:
