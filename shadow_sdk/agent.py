@@ -24,10 +24,15 @@ class AgentIdentity:
     owner_app: str
     audience: str
     scopes: frozenset[str]
+    capabilities: frozenset[str] = frozenset()
 
     def require_scope(self, scope: str) -> None:
         if scope not in self.scopes:
             raise AgentAuthError(f"agent lacks required scope: {scope}")
+
+    def require_capability(self, capability: str) -> None:
+        if capability not in self.capabilities:
+            raise AgentAuthError(f"agent lacks required capability: {capability}")
 
 
 class AgentAuthenticator:
@@ -84,6 +89,7 @@ def _load_entries(
             "owner_app",
             "audiences",
             "scopes",
+            "capabilities",
             "credential_hash_files",
             "disabled",
         }
@@ -101,6 +107,11 @@ def _load_entries(
         scopes = _string_list(config.get("scopes", []), "scopes", allow_empty=True)
         if not all(SCOPE_PATTERN.fullmatch(scope) for scope in scopes):
             raise AgentAuthError(f"invalid scope configured for agent: {agent_id}")
+        capabilities = _string_list(
+            config.get("capabilities", []), "capabilities", allow_empty=True
+        )
+        if not all(SCOPE_PATTERN.fullmatch(item) for item in capabilities):
+            raise AgentAuthError(f"invalid capability configured for agent: {agent_id}")
         paths = _string_list(
             config.get("credential_hash_files"),
             "credential_hash_files",
@@ -116,6 +127,7 @@ def _load_entries(
                     owner_app=owner_app,
                     audience=audience,
                     scopes=frozenset(scopes),
+                    capabilities=frozenset(capabilities),
                 ),
                 accepted_hashes,
             )

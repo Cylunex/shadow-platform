@@ -21,6 +21,7 @@ agents:
     owner_app: health
     audiences: [health]
     scopes: [health.read, health.write]
+    capabilities: [health.records.read]
     credential_hash_files:
       - agents/health-assistant/current-token.sha256
 """,
@@ -39,10 +40,13 @@ def test_authenticates_locally_and_enforces_scope(tmp_path):
 
     identity = authenticator.authenticate(f"Bearer {TOKEN}")
     identity.require_scope("health.write")
+    identity.require_capability("health.records.read")
     assert identity.agent_id == "health-assistant"
 
     with pytest.raises(AgentAuthError, match="lacks"):
         identity.require_scope("health.admin")
+    with pytest.raises(AgentAuthError, match="lacks"):
+        identity.require_capability("health.records.delete")
 
 
 def test_rejects_invalid_token(tmp_path):

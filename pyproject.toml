@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shadow-platform"
-version = "0.7.0"
+version = "0.7.1"
 description = "Shared identity, asset, notification, LLM and agent foundations for Shadow applications"
 readme = "README.md"
 requires-python = ">=3.11"

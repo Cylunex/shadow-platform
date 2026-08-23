@@ -23,7 +23,7 @@ Catalog 中纯后台服务使用 `auth.mode: service-bearer`。该值表示浏�
 - 稳定 `agent_id`；
 - 负责人项目 `owner_app`；
 - 可以调用的应用 `audiences`；
-- 最小权限 scopes；
+- 最小权限 scopes，以及应用在服务端验证的 capability grants；
 - 一至两个 Token SHA-256 文件，用于无停机轮换；
 - 是否禁用。
 

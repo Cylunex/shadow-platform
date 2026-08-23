@@ -90,7 +90,7 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
         },
         "exposure": { "enum": ["always", "on-demand", "hidden"] },
-        "result_mode": { "enum": ["full", "summary", "reference"] },
+        "result_mode": { "enum": ["full", "summary", "reference", "structured"] },
         "max_result_bytes": { "type": "integer", "minimum": 256, "maximum": 1048576 },
         "max_model_chars": { "type": "integer", "minimum": 128, "maximum": 100000 },
         "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 300000 },

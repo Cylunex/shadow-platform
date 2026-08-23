@@ -824,11 +824,28 @@ export function renderValue(value, tool) {
   if (tool.resultMode === 'summary') {
     modelValue = { summary: value.summary }
     if (typeof value.resource_uri === 'string') modelValue.resource_uri = value.resource_uri
+    for (const field of ['run_id', 'status', 'mode', 'kind', 'run_resource_uri',
+                         'provenance', 'warnings', 'error', 'cancellable']) {
+      if (value[field] !== undefined) modelValue[field] = value[field]
+    }
+    if (value.model_payload !== undefined) modelValue.data = value.model_payload
     if (value.continuation !== undefined) modelValue.continuation = value.continuation
   } else if (tool.resultMode === 'reference') {
     modelValue = { resource_uri: value.resource_uri }
     if (typeof value.summary === 'string') modelValue.summary = value.summary
+    for (const field of ['run_id', 'status', 'mode', 'kind', 'run_resource_uri',
+                         'warnings', 'error', 'cancellable']) {
+      if (value[field] !== undefined) modelValue[field] = value[field]
+    }
     if (value.continuation !== undefined) modelValue.continuation = value.continuation
+  } else if (tool.resultMode === 'structured') {
+    modelValue = {}
+    for (const field of ['run_id', 'status', 'mode', 'kind', 'resource_uri',
+                         'run_resource_uri', 'summary', 'provenance', 'warnings',
+                         'error', 'cancellable', 'continuation']) {
+      if (value[field] !== undefined) modelValue[field] = value[field]
+    }
+    modelValue.data = value.model_payload !== undefined ? value.model_payload : value.data
   }
   const rendered = boundedJson(modelValue, tool.maxResultBytes)
   if (rendered.length > tool.maxModelChars) {

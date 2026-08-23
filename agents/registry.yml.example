@@ -17,6 +17,14 @@ agents:
     scopes:
       - stock.read
       - stock.research
+    capabilities:
+      - foliant.market.read
+      - foliant.security-research.read
+      - foliant.security-research.preview
+      - foliant.selection.read
+      - foliant.selection.preview
+      - foliant.backtest.preview
+      - foliant.run.read
     credential_hash_files:
       - agents/foliant-researcher/current-token.sha256
 

@@ -97,6 +97,20 @@ def test_openapi_refs_keep_siblings_and_anyof_maps_to_dsh_union():
     assert union == {"oneOf": [{"type": "string"}, {"type": "null"}]}
 
 
+def test_dsh_result_modes_preserve_run_identity_and_bounded_structured_payload() -> None:
+    source = (ROOT / "scripts" / "build_dsh_bundle.py").read_text(encoding="utf-8")
+    assert "'run_id', 'status', 'mode', 'kind', 'run_resource_uri'" in source
+    assert "tool.resultMode === 'structured'" in source
+    assert "value.model_payload !== undefined ? value.model_payload : value.data" in source
+
+    schema = json.loads(
+        (ROOT / "contracts" / "agent-capability-manifest.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert "structured" in schema["$defs"]["tool"]["properties"]["result_mode"]["enum"]
+
+
 def test_plugin_definition_and_agent_versions_must_match(tmp_path):
     copied = tmp_path / "plugin"
     shutil.copytree(FIXTURE, copied)

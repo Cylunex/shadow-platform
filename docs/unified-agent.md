@@ -93,7 +93,7 @@ Agent principal 和凭据，例如 Health、Travel、Foliant 各一份；Harness
 
 一次调用至少经过三层授权：
 
-1. Agent Registry 验证 `agent_id`、audience、scopes 和禁用状态；
+1. Agent Registry 验证 `agent_id`、audience、scopes、capability grants 和禁用状态；
 2. 业务项目验证资源级权限，例如 Travel 的地图授权或 Health 的数据所有权；
 3. 写操作验证确认状态、幂等键、业务规则和审计要求。
 

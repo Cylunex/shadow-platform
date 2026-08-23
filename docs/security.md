@@ -68,7 +68,7 @@ Media 与 Telemetry 共用服务 Token 摘要 registry，每个应用最多同�
 
 - Agent Token 必须是至少 32 字节的高熵随机值，不使用人类密码。
 - Registry 只引用 Token SHA-256 文件，不保存原始 Token。
-- 每个 Agent 明确声明 audiences 和最小 scopes，应用本地同时检查二者。
+- 每个 Agent 明确声明 audiences、最小 scopes 和 capability grants，应用本地同时检查三者。
 - 用户可见的统一人格按项目使用独立 principal/Token，不持有横跨所有 audience 的万能凭据。
 - 写操作继续要求项目级幂等键、资源权限和审计；通过 Agent 身份不等于拥有全部业务权限。
 - Capability Manifest 是发现和编排元数据，不是授权来源；Skill/Prompt 不能放宽服务端策略。

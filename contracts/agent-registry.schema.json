@@ -40,6 +40,11 @@
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/scope" }
         },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/scope" }
+        },
         "credential_hash_files": {
           "type": "array",
           "minItems": 1,
