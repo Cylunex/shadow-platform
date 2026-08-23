@@ -5,7 +5,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from scripts.build_dsh_bundle import _dsh_value_spec, _resolve_ref, build_bundle
+from scripts.build_dsh_bundle import (
+    _dsh_value_spec,
+    _mcp_public_tool_name,
+    _resolve_ref,
+    build_bundle,
+)
 from shadow_sdk.plugin_contracts import (
     PluginContractError,
     contract_schema_path,
@@ -19,6 +24,15 @@ ROOT = Path(__file__).parents[1]
 FIXTURE = ROOT / "fixtures" / "conformance-plugin"
 
 
+class _CordisLoader(yaml.SafeLoader):
+    pass
+
+
+_CordisLoader.add_constructor(
+    "tag:yaml.org,2002:js", lambda loader, node: loader.construct_scalar(node)
+)
+
+
 def test_conformance_plugin_is_valid():
     plugin = validate_plugin(FIXTURE, ROOT)
 
@@ -29,6 +43,7 @@ def test_conformance_plugin_is_valid():
         "L1",
         "L2",
         "L3",
+        "L4",
     }
 
 
@@ -39,6 +54,20 @@ def test_capability_semantics_enforce_risk_confirmation_mapping():
     errors = validate_capability_semantics(manifest)
 
     assert "conformance.drafts.create:confirmation-does-not-match-L1" in errors
+
+
+def test_delete_capability_must_preserve_at_least_one_item():
+    manifest = yaml.safe_load((FIXTURE / "agent" / "manifest.yaml").read_text(encoding="utf-8"))
+    delete_capability = next(
+        item for item in manifest["capabilities"] if item["effect"] == "delete"
+    )
+    delete_capability.pop("destructive_limits")
+
+    errors = validate_capability_semantics(manifest)
+
+    assert (
+        "conformance.records.delete:delete-must-preserve-at-least-one-item" in errors
+    )
 
 
 def test_dsh_semver_ranges_handle_prereleases():
@@ -99,17 +128,20 @@ def test_dsh_bundle_build_is_deterministic_and_native(tmp_path, monkeypatch):
 
     package = json.loads((first / "package.json").read_text(encoding="utf-8"))
     lock = json.loads((first / "agent-bundle.lock").read_text(encoding="utf-8"))
-    patch = yaml.safe_load((first / "cordis.patch.yml").read_text(encoding="utf-8"))
+    patch = yaml.load(
+        (first / "cordis.patch.yml").read_text(encoding="utf-8"), Loader=_CordisLoader
+    )
     generated = (first / "profile.generated.js").read_text(encoding="utf-8")
+    generated_profile = json.loads(generated.removeprefix("export const PROFILE = "))
 
     assert package["dsh"]["bundle"]["patch"] == "./cordis.patch.yml"
     assert package["peerDependencies"]["@deepseek-ai/dsh-tools"] == "0.1.1-rc.2"
     assert package["engines"]["node"] == "^22.19.0 || >=24.0.0"
-    assert "dependencies" not in package
+    assert package["dependencies"]["@deepseek-ai/dsh-mcp-client"] == "0.1.1-rc.2"
     assert package["version"].startswith("0.0.0-shadow.")
     assert len(package["version"].removeprefix("0.0.0-shadow.")) == 12
     assert lock["profile_id"] == "shadow-conformance"
-    assert lock["version"] == 3
+    assert lock["version"] == 4
     assert lock["build_id"]
     assert lock["package_version"] == package["version"]
     assert lock["runtime_distribution_version"] == "0.1.1-rc.2"
@@ -119,10 +151,20 @@ def test_dsh_bundle_build_is_deterministic_and_native(tmp_path, monkeypatch):
     assert lock["model_exposure"]["skill_catalog_chars"] > 0
     assert [row["id"] for row in patch[0]["insert"]] == [
         "shadow-policy",
+        "shadow-mcp-conformance-test",
         "shadow-domain-conformance",
     ]
     assert "shadow_conformance_records_get" in generated
     assert "shadow_conformance_records_publish" in generated
+    assert "shadow_conformance_mcp_read" in generated
+    mcp_delete = next(
+        tool
+        for domain in generated_profile["domains"]
+        for tool in domain["tools"]
+        if tool["shadowName"] == "conformance.mcp.delete"
+    )
+    assert "shadow_confirmation" not in mcp_delete["parameters"]
+    assert mcp_delete["confirmationArgument"] == "shadow_confirmation"
     assert "resourcePath" in generated
     assert "resourceBase" in (first / "domain.js").read_text(encoding="utf-8")
     assert "config.instanceId" in (first / "domain.js").read_text(encoding="utf-8")
@@ -130,6 +172,12 @@ def test_dsh_bundle_build_is_deterministic_and_native(tmp_path, monkeypatch):
     assert "readBoundedJson" in runtime
     assert "tool.retryPolicy === 'idempotent'" in runtime
     assert "tool.maxModelChars" in runtime
+    assert "executeMcp" in runtime
+    assert "issueConfirmation" in runtime
+    policy = (first / "policy.js").read_text(encoding="utf-8")
+    assert "agent.ctx.tools.restrict" in policy
+    assert "isAuthorizedNestedMcp" in policy
+    assert "restoredSkillNames" in policy
     runtime_manifest = json.loads(
         (first / "shadow-runtime-manifest.json").read_text(encoding="utf-8")
     )
@@ -144,6 +192,30 @@ def test_dsh_bundle_build_is_deterministic_and_native(tmp_path, monkeypatch):
         / "references"
         / "result-format.md"
     ).is_file()
+
+
+def test_composition_plugin_dispatches_selected_read_only_domain_tools(tmp_path):
+    target = build_bundle(
+        platform_root=ROOT,
+        profile_path=ROOT / "fixtures" / "composition-profile.yml",
+        instances_path=ROOT / "fixtures" / "composition-instances.yml",
+        plugin_roots=[
+            ROOT / "fixtures" / "composition-health-plugin",
+            ROOT / "fixtures" / "composition-ledger-plugin",
+            ROOT / "compositions" / "shadow-daily-overview",
+        ],
+        output_dir=tmp_path / "output",
+    )
+
+    generated = (target / "profile.generated.js").read_text(encoding="utf-8")
+    runtime = (target / "runtime.js").read_text(encoding="utf-8")
+    assert "shadow_shadow_daily_overview_read" in generated
+    assert "shadow_health_summary_read" in generated
+    assert "shadow_ledger_summary_get" in generated
+    assert '"runtimeName":"shadow_health_summary_read"' in generated
+    assert '"runtimeName":"shadow_ledger_summary_get"' in generated
+    assert "executeComposition" in runtime
+    assert "parent: exec.token" in runtime
 
 
 def test_dsh_bundle_rejects_incompatible_runtime(tmp_path):
@@ -162,6 +234,93 @@ def test_dsh_bundle_rejects_incompatible_runtime(tmp_path):
             plugin_roots=[FIXTURE],
             output_dir=tmp_path / "output",
         )
+
+
+def test_high_risk_profile_requires_confirmation_signing(tmp_path):
+    profile_path = tmp_path / "profile.yml"
+    profile = yaml.safe_load(
+        (ROOT / "fixtures" / "conformance-profile.yml").read_text(encoding="utf-8")
+    )
+    profile["policy"].pop("confirmation")
+    profile_path.write_text(yaml.safe_dump(profile), encoding="utf-8")
+
+    with pytest.raises(PluginContractError, match="must configure confirmation signing"):
+        build_bundle(
+            platform_root=ROOT,
+            profile_path=profile_path,
+            instances_path=ROOT / "fixtures" / "conformance-instances.yml",
+            plugin_roots=[FIXTURE],
+            output_dir=tmp_path / "output",
+        )
+
+
+def test_high_risk_mcp_requires_reserved_confirmation_argument(tmp_path):
+    copied = tmp_path / "plugin"
+    shutil.copytree(FIXTURE, copied)
+    manifest_path = copied / "agent" / "manifest.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    capability = next(
+        item for item in manifest["capabilities"] if item["id"] == "conformance.mcp.delete"
+    )
+    capability["tools"][0].pop("confirmation_argument")
+    manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+    with pytest.raises(PluginContractError, match="receipt-argument"):
+        validate_plugin(copied, ROOT)
+
+
+def test_selected_transport_requires_its_instance_configuration(tmp_path):
+    instances_path = tmp_path / "instances.yml"
+    instances = yaml.safe_load(
+        (ROOT / "fixtures" / "conformance-instances.yml").read_text(encoding="utf-8")
+    )
+    instances["instances"]["conformance-test"].pop("base_url_env")
+    instances_path.write_text(yaml.safe_dump(instances), encoding="utf-8")
+
+    with pytest.raises(PluginContractError, match="HTTP tools require"):
+        build_bundle(
+            platform_root=ROOT,
+            profile_path=ROOT / "fixtures" / "conformance-profile.yml",
+            instances_path=instances_path,
+            plugin_roots=[FIXTURE],
+            output_dir=tmp_path / "output",
+        )
+
+
+def test_composition_rejects_mutating_target_capabilities(tmp_path):
+    copied_health = tmp_path / "health-plugin"
+    shutil.copytree(ROOT / "fixtures" / "composition-health-plugin", copied_health)
+    manifest_path = copied_health / "agent" / "manifest.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    capability = manifest["capabilities"][0]
+    capability.update(
+        effect="write",
+        risk_level="L1",
+        confirmation="notify",
+        reversible=True,
+        idempotency_required=True,
+    )
+    manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+    with pytest.raises(PluginContractError, match="composition workflows are read-only"):
+        build_bundle(
+            platform_root=ROOT,
+            profile_path=ROOT / "fixtures" / "composition-profile.yml",
+            instances_path=ROOT / "fixtures" / "composition-instances.yml",
+            plugin_roots=[
+                copied_health,
+                ROOT / "fixtures" / "composition-ledger-plugin",
+                ROOT / "compositions" / "shadow-daily-overview",
+            ],
+            output_dir=tmp_path / "output",
+        )
+
+
+def test_mcp_public_name_matches_official_dsh_algorithm():
+    assert _mcp_public_tool_name("health", "summary") == "mcp__health__summary"
+    assert _mcp_public_tool_name("health", "a tool with spaces") == (
+        "mcp__health__a_tool_with_spaces_8faca585f35f"
+    )
 
 
 def test_hidden_tools_are_not_registered(tmp_path):

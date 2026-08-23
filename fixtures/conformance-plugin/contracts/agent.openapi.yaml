@@ -67,6 +67,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReferenceResult"
+  /api/agent/records/delete:
+    post:
+      operationId: delete_records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [record_ids]
+              properties:
+                record_ids:
+                  type: array
+                  minItems: 1
+                  items: { type: string }
+      responses:
+        "200":
+          description: Bounded delete result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [summary, deleted, remaining]
+                properties:
+                  summary: { type: string }
+                  deleted: { type: integer }
+                  remaining: { type: integer, minimum: 1 }
 components:
   schemas:
     DraftInput:

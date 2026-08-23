@@ -142,6 +142,10 @@ travel.visits.summarize
   -> garden.posts.draft
 ```
 
+Platform 已提供首个可运行的只读 Composition Plugin：`shadow-daily-overview`。它按日期读取
+Health 摘要，再按月份和币种读取 Ledger 摘要；任一领域不可用时返回有界降级结果，不缓存两边
+正文。它是合同、构建和隔离方式的示例，不是新的聚合数据库。
+
 工作流必须：
 
 - 每一步分别使用目标项目的独立凭据；
@@ -149,6 +153,9 @@ travel.visits.summarize
 - 继承每个 capability 的资源授权、确认和幂等要求；
 - 使用统一 `request_id` / `trace_id` 串联审计，但不集中记录正文；
 - 中间失败时保持已提交写入可识别、可重试，不用 Prompt 猜测事务结果。
+
+当前 Composition 只允许顺序调用 L0 只读/分析能力。涉及写入、发布、删除或资金执行时，应由
+领域项目提供草案/确认 API；在补偿、重放和持久队列合同成熟前，不扩展成跨项目写事务。
 
 只有跨项目流程需要独立持久状态、任务队列、扩缩容或发布周期时，才考虑拆出
 `shadow-orchestrator`。当前不提前建立该仓库。

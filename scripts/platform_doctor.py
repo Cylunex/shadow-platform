@@ -62,6 +62,11 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             root / "agents" / "profiles" / "shadow-general.yml.example",
             root / "contracts" / "agent-profile.schema.json",
         ),
+        (
+            "Composition profile schema",
+            root / "agents" / "profiles" / "shadow-daily-overview.yml.example",
+            root / "contracts" / "agent-profile.schema.json",
+        ),
     )
     loaded: dict[str, dict[str, Any]] = {}
     for name, document_path, schema_path in documents:
@@ -86,6 +91,19 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             "catalog LLM references",
             "fail" if missing_models else "pass",
             f"unknown aliases: {missing_models}" if missing_models else "all aliases exist",
+        )
+    )
+
+    try:
+        validate_plugin(root / "compositions" / "shadow-daily-overview", root)
+        composition_error = None
+    except PluginContractError as exc:
+        composition_error = str(exc)
+    results.append(
+        CheckResult(
+            "Shadow composition plugin",
+            "fail" if composition_error else "pass",
+            composition_error or "daily overview workflow and skill valid",
         )
     )
 

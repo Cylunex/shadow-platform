@@ -18,7 +18,8 @@ Shadow Platform 是 Shadow 系列的共享基础设施层。它统一身份、�
 - Asset/Media 文件、去重、版本、引用和生命周期；
 - Notifications 收件箱、TG/QQ/飞书投递与运维状态；
 - LLM 配置 SDK 和脱敏用量元数据；
-- Shadow Plugin 合同、Agent Profile、DSH Bundle 构建与最小权限验证；
+- Shadow Plugin 合同、Agent Profile、DSH HTTP/MCP/Composition Bundle 与最小权限验证；
+- 按需 Skill 工具装载、L3/L4 签名确认回执和防删空约束；
 - Shadow SDK、接口合同和配置自检工具。
 
 ## 本地验证

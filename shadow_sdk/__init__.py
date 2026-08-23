@@ -3,6 +3,18 @@
 from .agent import AgentAuthenticator, AgentAuthError, AgentIdentity
 from .assets import AssetClient, AssetClientError
 from .catalog import AppDescriptor, CatalogError, load_app_catalog
+from .confirmation import (
+    ConfirmationBinding,
+    ConfirmationError,
+    ConfirmationReplayStore,
+    ConfirmationSigner,
+    ConfirmationVerifier,
+    VerifiedConfirmation,
+    arguments_sha256,
+    decode_confirmation_receipt,
+    encode_confirmation_receipt,
+    enforce_destructive_limits,
+)
 from .identity import VerifiedIdentity
 from .llm import LLMConfigError, ResolvedLLMConfig, resolve_llm_config
 from .llm_client import (
@@ -29,6 +41,11 @@ __all__ = [
     "AssetClientError",
     "AsyncLLMClient",
     "CatalogError",
+    "ConfirmationBinding",
+    "ConfirmationError",
+    "ConfirmationReplayStore",
+    "ConfirmationSigner",
+    "ConfirmationVerifier",
     "JsonlUsageSink",
     "LLMClient",
     "LLMConfigError",
@@ -45,9 +62,14 @@ __all__ = [
     "RetryPolicy",
     "ServiceAuthError",
     "UsageSink",
+    "VerifiedConfirmation",
     "VerifiedIdentity",
     "resolve_llm_config",
     "load_app_catalog",
     "hash_service_token",
     "load_service_token_hashes",
+    "arguments_sha256",
+    "decode_confirmation_receipt",
+    "encode_confirmation_receipt",
+    "enforce_destructive_limits",
 ]

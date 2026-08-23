@@ -10,6 +10,9 @@ skills:
       - conformance.drafts.create
       - conformance.records.apply
       - conformance.records.publish
+      - conformance.records.delete
+      - conformance.mcp.read
+      - conformance.mcp.delete
     invocation:
       model: true
       user: true
@@ -106,3 +109,79 @@ capabilities:
     reversible: false
     resource_grant_required: true
     idempotency_required: true
+  - id: conformance.records.delete
+    summary: 删除部分测试记录，但必须至少保留一条
+    audience: conformance
+    scopes: [conformance.records.delete]
+    tools:
+      - name: conformance.records.delete
+        transport: http
+        contract_ref: contracts/agent.openapi.yaml
+        operation_id: delete_records
+        exposure: on-demand
+        result_mode: summary
+        max_result_bytes: 4096
+        max_model_chars: 1000
+        timeout_ms: 5000
+        concurrency_safe: false
+        retry_policy: idempotent
+    effect: delete
+    data_classification: personal
+    risk_level: L4
+    confirmation: elevated
+    reversible: false
+    resource_grant_required: true
+    idempotency_required: true
+    destructive_limits:
+      count_argument: record_ids
+      min_remaining: 1
+  - id: conformance.mcp.read
+    summary: 通过官方 DSH MCP Client 读取测试记录
+    audience: conformance
+    scopes: [conformance.mcp.read]
+    tools:
+      - name: conformance.mcp.read
+        transport: mcp
+        contract_ref: contracts/mcp-tools.json
+        operation_id: read_record
+        exposure: on-demand
+        result_mode: full
+        max_result_bytes: 4096
+        max_model_chars: 1000
+        timeout_ms: 5000
+        concurrency_safe: true
+        retry_policy: idempotent
+    effect: read
+    data_classification: internal
+    risk_level: L0
+    confirmation: none
+    reversible: true
+    resource_grant_required: false
+    idempotency_required: false
+  - id: conformance.mcp.delete
+    summary: 通过 MCP 删除部分记录，但必须至少保留一条
+    audience: conformance
+    scopes: [conformance.mcp.delete]
+    tools:
+      - name: conformance.mcp.delete
+        transport: mcp
+        contract_ref: contracts/mcp-tools.json
+        operation_id: delete_records
+        exposure: on-demand
+        result_mode: full
+        max_result_bytes: 4096
+        max_model_chars: 1000
+        timeout_ms: 5000
+        concurrency_safe: false
+        retry_policy: idempotent
+        confirmation_argument: shadow_confirmation
+    effect: delete
+    data_classification: personal
+    risk_level: L4
+    confirmation: elevated
+    reversible: false
+    resource_grant_required: true
+    idempotency_required: true
+    destructive_limits:
+      count_argument: record_ids
+      min_remaining: 1

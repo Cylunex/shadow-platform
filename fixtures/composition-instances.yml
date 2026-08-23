@@ -1,0 +1,21 @@
+version: 1
+instances:
+  health-composition-test:
+    plugin_id: shadow-health
+    plugin_version: 0.1.0
+    environment: test
+    base_url_env: SHADOW_HEALTH_BASE_URL
+    credential_env: SHADOW_HEALTH_TOKEN
+    enabled: true
+  ledger-composition-test:
+    plugin_id: shadow-ledger
+    plugin_version: 1.0.0
+    environment: test
+    base_url_env: SHADOW_LEDGER_BASE_URL
+    credential_env: SHADOW_LEDGER_TOKEN
+    enabled: true
+  overview-composition-test:
+    plugin_id: shadow-daily-overview
+    plugin_version: 1.0.0
+    environment: test
+    enabled: true

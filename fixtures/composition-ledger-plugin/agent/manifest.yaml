@@ -1,0 +1,32 @@
+version: 2
+app_id: ledger
+package_version: 1.0.0
+skills:
+  - id: composition-ledger
+    path: skills/composition-ledger/SKILL.md
+    summary: 测试 Ledger 组合读取
+    capabilities: [ledger.summary.read]
+capabilities:
+  - id: ledger.summary.read
+    summary: 读取测试财务摘要
+    audience: ledger
+    scopes: [ledger.summary.read]
+    tools:
+      - name: ledger.summary.get
+        transport: http
+        contract_ref: contracts/agent.openapi.yaml
+        operation_id: get_ledger_summary
+        exposure: on-demand
+        result_mode: full
+        max_result_bytes: 4096
+        max_model_chars: 1000
+        timeout_ms: 5000
+        concurrency_safe: true
+        retry_policy: idempotent
+    effect: read
+    data_classification: sensitive
+    risk_level: L0
+    confirmation: none
+    reversible: true
+    resource_grant_required: true
+    idempotency_required: false

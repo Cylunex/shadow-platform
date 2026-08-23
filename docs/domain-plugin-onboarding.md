@@ -32,6 +32,9 @@ shadow-<domain>/
     └── permissions.yaml
 ```
 
+MCP 项目另提供静态 `mcp-tools.json`；Composition Plugin 则提供
+`contracts/workflow.yaml`，不提供自己的数据库或通用转发服务。
+
 `prompts/` 和 `evals/` 仍由项目自己运行，默认不进入 DSH Bundle。Skill 目录会被整体打包，
 相对资源通过 DSH `resourceBase` 读取，不能引用开发机绝对路径或目录外文件。Builder 拒绝
 符号链接、隐藏文件、常见私钥扩展名、超过 10 MiB 的单文件和超过 50 MiB 的 Skill 目录。
@@ -44,7 +47,8 @@ shadow-<domain>/
 4. 再编写 Skill，说明何时调用、调用顺序、失败降级和事实边界。
 5. 最后配置 Profile，只选择当前场景需要的插件实例与能力。
 
-`hidden` 工具不会进入 DSH；`on-demand` 当前只表示发现意图，不能替代 scope、资源授权或
+`hidden` 工具不会进入 DSH；`on-demand` 工具只在对应 Skill 成功载入后进入当前 Agent 的可见
+工具集合，并能从 Session 历史恢复。它仍只是模型可见性控制，不能替代 scope、资源授权或
 服务端权限检查。
 
 ## 4. DSH 适配要求
@@ -55,7 +59,8 @@ shadow-<domain>/
 - `package.json` 声明 `dsh.bundle.patch`，patch 只插入本插件拥有的 Cordis 行；
 - 插件入口使用命名导出 `name`、`inject`、`Config`（需要配置时）和 `apply`；
 - 通过 `ctx.tools.register()`、`ctx.skills.register()` 等 effect-backed API 注册，卸载时自动回收；
-- 所有 `@deepseek-ai/*` 宿主包放 `peerDependencies`，不能放运行时 `dependencies`；
+- `@deepseek-ai/dsh-tools` 宿主包放 `peerDependencies`；官方 MCP Client 在使用 MCP 时作为精确
+  锁定的普通 dependency；
 - 声明 Node engine，首期基线为 `^22.19.0 || >=24.0.0`；
 - 发布预构建 tarball，生产安装不依赖 `prepare`、Git checkout 或在线 TypeScript 编译；
 - Profile 精确锁定 DSH 与 Tools API，Plugin 声明兼容范围，Builder 在生成前强制校验；
@@ -76,6 +81,22 @@ Profile 的 Bundle 层先于 Profile 自己的 `cordis.patch.yml` 应用，因�
 - 错误只返回稳定分类和 HTTP 状态，不回显响应正文、Token、查询实值或个人数据；
 - `summary` 和 `reference` 分别只渲染摘要或资源引用，同时执行响应字节和模型字符上限；
 - 需要长期任务时使用领域任务资源或 DSH task seam，不让普通 Tool promise 无限运行。
+
+MCP 不靠运行时发现结果生成合同。项目提交静态 Tool Catalog，`operation_id` 与 MCP 原始工具名
+一致；每个 Server 在部署 Instance 中声明 streamable-http 或 stdio 配置。Shadow Wrapper 隐藏
+底层 `mcp__*` 工具并统一应用 Profile、结果预算与确认策略。
+
+L3/L4 领域接口必须验证 `ConfirmationReceipt`：校验签名算法和可信 key id、issuer、最长
+15 分钟有效期、audience/plugin/capability/tool/effect、规范化参数 SHA-256、可选资源 URI，
+再以持久化唯一 nonce 原子消费。相同 receipt + 相同幂等键可返回既有结果；换幂等键重放必须
+拒绝。HTTP 从 `X-Shadow-Confirmation` 读取，MCP 从 Manifest 声明的保留参数读取。
+
+参数摘要针对 Adapter 收到的完整 Tool 输入：HTTP 的 path/query 参数保持顶层，JSON 请求体放在
+`body`；MCP 在注入保留回执参数前计算摘要，服务端验签时必须先移除该保留参数。双方统一使用
+UTF-8、对象键排序、无空白、禁止 NaN/Infinity 的 JSON，再计算小写 SHA-256。
+
+删除能力还要在服务端事务中根据真实 `total_before` 检查 `min_remaining >= 1`。确认回执只证明
+用户批准了这组参数，不替代“不能删空”、外键约束、资源授权或业务审计。
 
 ## 6. 各项目首期边界
 

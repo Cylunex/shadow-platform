@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 from copy import deepcopy
 from pathlib import Path
@@ -28,6 +29,52 @@ HTTP_METHODS = ("get", "post", "put", "patch", "delete")
 MAX_SKILL_RESOURCE_BYTES = 10 * 1024 * 1024
 MAX_SKILL_DIRECTORY_BYTES = 50 * 1024 * 1024
 SENSITIVE_SKILL_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".keystore"}
+
+
+class _JsExpression(str):
+    pass
+
+
+def _represent_js_expression(dumper: yaml.SafeDumper, value: _JsExpression):
+    return dumper.represent_scalar("tag:yaml.org,2002:js", str(value), style="'")
+
+
+yaml.SafeDumper.add_representer(_JsExpression, _represent_js_expression)
+
+
+def _mcp_patch_entry(domain: dict[str, Any]) -> dict[str, Any]:
+    mcp = domain["mcp"]
+    config: dict[str, Any] = {
+        "serverName": mcp["server_name"],
+        "transport": mcp["transport"],
+        "toolCallTimeoutMs": mcp.get("tool_call_timeout_ms", 60000),
+        "failOnStartupError": mcp["fail_on_startup_error"],
+        "reconnect": {
+            "enabled": mcp["reconnect"]["enabled"],
+            "initialDelayMs": mcp["reconnect"]["initial_delay_ms"],
+            "maxDelayMs": mcp["reconnect"]["max_delay_ms"],
+            "maxAttempts": mcp["reconnect"]["max_attempts"],
+        },
+    }
+    if mcp["transport"] == "streamable-http":
+        config["url"] = _JsExpression(f"process.env.{mcp['url_env']}")
+        token_env = mcp["bearer_token_env"]
+        config["headers"] = {
+            "Authorization": _JsExpression(f"`Bearer ${{process.env.{token_env}}}`")
+        }
+    else:
+        config["command"] = mcp["command"]
+        config["args"] = mcp["args"]
+        config["env"] = {
+            name: _JsExpression(f"process.env.{name}") for name in mcp["env_forward"]
+        }
+        if mcp.get("cwd_env"):
+            config["cwd"] = _JsExpression(f"process.env.{mcp['cwd_env']}")
+    return {
+        "id": f"shadow-mcp-{domain['instanceId']}",
+        "name": "@deepseek-ai/dsh-mcp-client",
+        "config": config,
+    }
 
 
 def _resolve_ref(document: dict[str, Any], value: Any) -> Any:
@@ -181,7 +228,9 @@ def _compile_http_tool(
         "name": dsh_tool_name(tool["name"]),
         "shadowName": tool["name"],
         "capabilityId": capability["id"],
+        "audience": capability["audience"],
         "description": capability["summary"],
+        "transport": "http",
         "parameters": parameters,
         "output": _response_schema(document, operation),
         "method": method,
@@ -199,6 +248,99 @@ def _compile_http_tool(
         "effect": capability["effect"],
         "idempotencyRequired": capability["idempotency_required"],
         "retryPolicy": tool["retry_policy"],
+        "confirmationResource": capability.get("confirmation_resource"),
+        "destructiveLimits": capability.get("destructive_limits"),
+    }
+
+
+def _mcp_public_tool_name(server_name: str, raw_name: str) -> str:
+    joined = f"mcp__{server_name}__{raw_name}"
+    normalized = re.sub(r"[^A-Za-z0-9_-]", "_", joined)
+    if normalized == joined and len(normalized) <= 64:
+        return normalized
+    digest = hashlib.sha256(f"{server_name}\0{raw_name}".encode()).hexdigest()[:12]
+    return f"{normalized[:51]}_{digest}"
+
+
+def _compile_mcp_tool(
+    plugin: ValidatedPlugin,
+    capability: dict[str, Any],
+    tool: dict[str, Any],
+    instance: dict[str, Any],
+) -> dict[str, Any]:
+    mcp = instance.get("mcp")
+    if not isinstance(mcp, dict):
+        raise PluginContractError(f"{tool['name']}: MCP transport requires instance.mcp")
+    catalog = load_document(plugin.root / tool["contract_ref"])
+    if catalog["server_name"] != mcp["server_name"]:
+        raise PluginContractError(
+            f"{tool['name']}: MCP catalog server_name does not match instance.mcp.server_name"
+        )
+    advertised = next(
+        item for item in catalog["tools"] if item["name"] == tool["operation_id"]
+    )
+    parameters = _dsh_value_spec(catalog, advertised["inputSchema"]).get("properties", {})
+    confirmation_argument = tool.get("confirmation_argument")
+    if confirmation_argument is not None:
+        parameters.pop(confirmation_argument, None)
+    return {
+        "name": dsh_tool_name(tool["name"]),
+        "shadowName": tool["name"],
+        "capabilityId": capability["id"],
+        "audience": capability["audience"],
+        "description": capability["summary"],
+        "transport": "mcp",
+        "parameters": parameters,
+        "output": _dsh_value_spec(catalog, advertised.get("outputSchema", {})),
+        "mcpName": _mcp_public_tool_name(mcp["server_name"], advertised["name"]),
+        "confirmationArgument": confirmation_argument,
+        "timeoutMs": tool["timeout_ms"],
+        "concurrencySafe": tool["concurrency_safe"],
+        "resultMode": tool["result_mode"],
+        "maxResultBytes": tool["max_result_bytes"],
+        "maxModelChars": tool["max_model_chars"],
+        "exposure": tool["exposure"],
+        "riskLevel": capability["risk_level"],
+        "effect": capability["effect"],
+        "idempotencyRequired": capability["idempotency_required"],
+        "retryPolicy": tool["retry_policy"],
+        "confirmationResource": capability.get("confirmation_resource"),
+        "destructiveLimits": capability.get("destructive_limits"),
+    }
+
+
+def _compile_composition_tool(
+    plugin: ValidatedPlugin, capability: dict[str, Any], tool: dict[str, Any]
+) -> dict[str, Any]:
+    document = load_document(plugin.root / tool["contract_ref"])
+    workflow = next(
+        item for item in document["workflows"] if item["operation_id"] == tool["operation_id"]
+    )
+    parameter_spec = _dsh_value_spec(document, workflow["parameters"])
+    if parameter_spec.get("type") != "object":
+        raise PluginContractError(f"{tool['name']}: workflow parameters must be an object")
+    return {
+        "name": dsh_tool_name(tool["name"]),
+        "shadowName": tool["name"],
+        "capabilityId": capability["id"],
+        "audience": capability["audience"],
+        "description": capability["summary"],
+        "transport": "composition",
+        "parameters": parameter_spec.get("properties", {}),
+        "output": {"type": "object", "additionalProperties": True},
+        "steps": deepcopy(workflow["steps"]),
+        "timeoutMs": tool["timeout_ms"],
+        "concurrencySafe": tool["concurrency_safe"],
+        "resultMode": tool["result_mode"],
+        "maxResultBytes": tool["max_result_bytes"],
+        "maxModelChars": tool["max_model_chars"],
+        "exposure": tool["exposure"],
+        "riskLevel": capability["risk_level"],
+        "effect": capability["effect"],
+        "idempotencyRequired": capability["idempotency_required"],
+        "retryPolicy": tool["retry_policy"],
+        "confirmationResource": capability.get("confirmation_resource"),
+        "destructiveLimits": capability.get("destructive_limits"),
     }
 
 
@@ -221,17 +363,28 @@ def _compile_plugin(
 ) -> dict[str, Any]:
     capabilities = _selected_capabilities(plugin, selected)
     selected_ids = {item["id"] for item in capabilities}
+    selected_transports = {
+        tool["transport"] for capability in capabilities for tool in capability["tools"]
+    }
+    if "http" in selected_transports and not all(
+        instance.get(field) for field in ("base_url_env", "credential_env")
+    ):
+        raise PluginContractError(
+            f"{instance_id}: HTTP tools require base_url_env and credential_env"
+        )
+    if "mcp" in selected_transports and not instance.get("mcp"):
+        raise PluginContractError(f"{instance_id}: MCP tools require instance mcp configuration")
     tools: list[dict[str, Any]] = []
     for capability in capabilities:
         for tool in capability["tools"]:
             if tool["exposure"] == "hidden":
                 continue
-            if tool["transport"] != "http":
-                raise PluginContractError(
-                    f"{tool['name']}: the initial DSH builder supports HTTP/OpenAPI; "
-                    "MCP adapter pending"
-                )
-            tools.append(_compile_http_tool(plugin, capability, tool))
+            if tool["transport"] == "http":
+                tools.append(_compile_http_tool(plugin, capability, tool))
+            elif tool["transport"] == "mcp":
+                tools.append(_compile_mcp_tool(plugin, capability, tool, instance))
+            else:
+                tools.append(_compile_composition_tool(plugin, capability, tool))
 
     skills = []
     agent_dir = plugin.descriptor_paths["agent"].parent
@@ -249,14 +402,21 @@ def _compile_plugin(
                     "userInvocable": invocation["user"],
                 },
                 "resourcePath": f"skills/{plugin.plugin_id}/{skill['id']}",
+                "capabilityIds": sorted(selected_ids.intersection(skill["capabilities"])),
             }
         )
     return {
         "pluginId": plugin.plugin_id,
         "pluginVersion": plugin.version,
         "instanceId": instance_id,
-        "baseUrlEnv": instance["base_url_env"],
-        "credentialEnv": instance["credential_env"],
+        "baseUrlEnv": instance.get("base_url_env"),
+        "credentialEnv": instance.get("credential_env"),
+        "kind": plugin.definition["kind"],
+        "mcp": (
+            deepcopy(instance.get("mcp"))
+            if any(tool["transport"] == "mcp" for tool in tools)
+            else None
+        ),
         "tools": tools,
         "skills": skills,
     }
@@ -307,7 +467,7 @@ def _skill_resource_files(skill_file: Path) -> list[Path]:
 DOMAIN_JS = """import { fileURLToPath } from 'node:url'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { PROFILE } from './profile.generated.js'
-import { executeHttp, renderValue } from './runtime.js'
+import { executeTool, renderValue } from './runtime.js'
 
 export const name = 'shadow-domain'
 export const inject = ['tools', 'skills']
@@ -316,7 +476,7 @@ export function apply(ctx, config) {
   const domain = PROFILE.domains.find((item) => item.instanceId === config.instanceId)
   if (!domain) throw new Error(`unknown generated Shadow instance: ${config.instanceId}`)
   for (const skill of domain.skills) {
-    const { resourcePath, ...definition } = skill
+    const { resourcePath, toolNames: _toolNames, ...definition } = skill
     ctx.skills.register({
       ...definition,
       source: 'runtime',
@@ -338,7 +498,7 @@ export function apply(ctx, config) {
       },
       timeoutMs: tool.timeoutMs,
       isConcurrencySafe: () => tool.concurrencySafe === true,
-      execute: (args, exec) => executeHttp(domain, tool, args, exec),
+      execute: (args, exec) => executeTool(ctx, domain, tool, args, exec),
     }))
   }
 }
@@ -346,6 +506,7 @@ export function apply(ctx, config) {
 
 
 POLICY_JS = """import { PROFILE } from './profile.generated.js'
+import { isAuthorizedNestedMcp } from './runtime.js'
 
 export const name = 'shadow-policy'
 export const inject = ['tools']
@@ -353,6 +514,72 @@ export const inject = ['tools']
 const policies = new Map(
   PROFILE.domains.flatMap((domain) => domain.tools.map((tool) => [tool.name, tool])),
 )
+const skills = new Map(
+  PROFILE.domains.flatMap((domain) => domain.skills.map((skill) => [skill.name, skill])),
+)
+const onDemandTools = new Set(
+  PROFILE.domains.flatMap((domain) => domain.tools)
+    .filter((tool) => tool.exposure === 'on-demand')
+    .map((tool) => tool.name),
+)
+const internalMcpTools = new Set(
+  PROFILE.domains.flatMap((domain) => domain.tools)
+    .filter((tool) => tool.transport === 'mcp')
+    .map((tool) => tool.mcpName),
+)
+const agentStates = new WeakMap()
+const liveAgents = new Set()
+let refreshingRestrictions = false
+
+function restoredSkillNames(agent) {
+  const calls = new Map()
+  const loaded = new Set()
+  for (const event of agent.session.events ?? []) {
+    if (event.type === 'tool/call' && event.data?.name === 'skill') {
+      try {
+        const args = JSON.parse(event.data.arguments)
+        if (typeof args.name === 'string') calls.set(event.data.callId, args.name)
+      } catch {
+        // Invalid historical arguments never grant tools.
+      }
+    }
+    if (event.type !== 'tool/result') continue
+    const block = event.data?.message?.content?.[0]
+    if (!block || block.type !== 'tool-result' || block.isError === true) continue
+    const skillName = calls.get(block.toolCallId)
+    if (skillName) loaded.add(skillName)
+  }
+  return loaded
+}
+
+function applyRestriction(agent, activeSkills) {
+  const wasRefreshing = refreshingRestrictions
+  refreshingRestrictions = true
+  try {
+    const prior = agentStates.get(agent)
+    prior?.dispose?.()
+    const allowed = new Set()
+    for (const skillName of activeSkills) {
+      for (const toolName of skills.get(skillName)?.toolNames ?? []) allowed.add(toolName)
+    }
+    const deny = [
+      ...[...onDemandTools].filter((name) => !allowed.has(name)),
+      ...[...internalMcpTools].filter((name) => agent.ctx.tools.get(name, agent)),
+    ]
+    const dispose = deny.length > 0 ? agent.ctx.tools.restrict({ deny }) : undefined
+    agentStates.set(agent, { activeSkills, dispose })
+  } finally {
+    refreshingRestrictions = wasRefreshing
+  }
+}
+
+function activateSkill(agent, skillName) {
+  if (!skills.has(skillName)) return
+  const active = new Set(agentStates.get(agent)?.activeSkills ?? [])
+  if (active.has(skillName)) return
+  active.add(skillName)
+  applyRestriction(agent, active)
+}
 
 function stricter(decision, required) {
   if (decision?.kind === 'deny' || decision?.kind === 'ask') return decision
@@ -360,6 +587,48 @@ function stricter(decision, required) {
 }
 
 export function apply(ctx) {
+  ctx.on('agent/created', ({ agent }) => {
+    liveAgents.add(agent)
+    applyRestriction(agent, restoredSkillNames(agent))
+  })
+  ctx.on('agent/disposed', ({ agent }) => {
+    liveAgents.delete(agent)
+    agentStates.delete(agent)
+  })
+  ctx.on('tools/change', () => {
+    if (refreshingRestrictions) return
+    refreshingRestrictions = true
+    try {
+      for (const agent of liveAgents) {
+        applyRestriction(agent, new Set(agentStates.get(agent)?.activeSkills ?? []))
+      }
+    } finally {
+      refreshingRestrictions = false
+    }
+  })
+  ctx.on('agent/pre-step', async (_payload, next) => {
+    const decision = await next()
+    if (decision.kind !== 'enter') return decision
+    for (const message of decision.messages ?? []) {
+      const source = message.source
+      if (source?.kind === 'skill-invocation' && typeof source.name === 'string') {
+        activateSkill(_payload.agent, source.name)
+      }
+    }
+    return decision
+  })
+  ctx.on('tools/post-execute', async (exec, result, next) => {
+    const decision = await next()
+    if (
+      !result.isError
+      && exec.name === 'skill'
+      && exec.agent
+      && typeof exec.arguments?.name === 'string'
+    ) {
+      activateSkill(exec.agent, exec.arguments.name)
+    }
+    return decision
+  })
   ctx.on('tools/pre-execute', async (exec, next) => {
     const tool = policies.get(exec.name)
     if (!tool) return next()
@@ -380,6 +649,9 @@ export function apply(ctx) {
     })
   })
   ctx.tools.guard((exec) => {
+    if (internalMcpTools.has(exec.name) && !isAuthorizedNestedMcp(exec.parent)) {
+      return 'Raw MCP tools are private to their Shadow wrapper.'
+    }
     const tool = policies.get(exec.name)
     if (tool?.riskLevel === 'L4' && !PROFILE.policy.allowElevated) {
       return 'Elevated Shadow capability is disabled for this profile.'
@@ -390,7 +662,22 @@ export function apply(ctx) {
 """
 
 
-RUNTIME_JS = r"""import { createHash } from 'node:crypto'
+RUNTIME_JS = r"""import {
+  createHash,
+  createPrivateKey,
+  randomBytes,
+  randomUUID,
+  sign,
+} from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { PROFILE } from './profile.generated.js'
+
+const authorizedMcpParents = new Set()
+const signingKeys = new Map()
+
+export function isAuthorizedNestedMcp(parent) {
+  return parent !== undefined && authorizedMcpParents.has(parent)
+}
 
 function requiredEnv(name) {
   const value = process.env[name]
@@ -408,6 +695,92 @@ function boundedJson(value, maxBytes) {
 
 function safeRequestId(callId) {
   return createHash('sha256').update(`shadow-dsh:${callId}`).digest('hex').slice(0, 32)
+}
+
+function canonicalValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalValue)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalValue(value[key])]),
+    )
+  }
+  if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return value
+  throw new Error('confirmation arguments must be lossless JSON')
+}
+
+function canonicalJson(value) {
+  return JSON.stringify(canonicalValue(value))
+}
+
+function base64url(value) {
+  return Buffer.from(value).toString('base64url')
+}
+
+function confirmationResource(tool, args) {
+  const resource = tool.confirmationResource
+  if (!resource) return undefined
+  let uri = resource.template
+  for (const name of resource.arguments) {
+    const value = args[name] ?? args.body?.[name]
+    if (value === undefined || value === null) {
+      throw new Error(`confirmation resource argument is missing: ${name}`)
+    }
+    uri = uri.replaceAll(`{${name}}`, encodeURIComponent(String(value)))
+  }
+  return uri
+}
+
+function signingKey(policy) {
+  const keyPath = requiredEnv(policy.private_key_file_env)
+  const cacheKey = `${policy.algorithm}:${keyPath}`
+  if (!signingKeys.has(cacheKey)) {
+    let pem
+    try {
+      pem = readFileSync(keyPath)
+    } catch {
+      throw new Error('confirmation signing key cannot be read')
+    }
+    signingKeys.set(cacheKey, createPrivateKey(pem))
+  }
+  return signingKeys.get(cacheKey)
+}
+
+function issueConfirmation(domain, tool, args, exec) {
+  const policy = PROFILE.policy.confirmation
+  if (!policy) throw new Error('confirmation signing is not configured')
+  if (!exec.agent?.id) throw new Error('confirmed tools require an agent identity')
+  const issued = new Date()
+  const expires = new Date(issued.getTime() + policy.ttl_seconds * 1000)
+  const unsigned = {
+    version: 1,
+    receipt_id: `receipt-${randomUUID()}`,
+    issuer: policy.issuer,
+    actor: String(exec.agent.id),
+    audience: tool.audience,
+    plugin_id: domain.pluginId,
+    capability_id: tool.capabilityId,
+    tool_name: tool.shadowName,
+    effect: tool.effect,
+    arguments_sha256: createHash('sha256').update(canonicalJson(args)).digest('hex'),
+    issued_at: issued.toISOString(),
+    expires_at: expires.toISOString(),
+    nonce: base64url(randomBytes(24)),
+    single_use: true,
+  }
+  const resourceUri = confirmationResource(tool, args)
+  if (resourceUri !== undefined) unsigned.resource_uri = resourceUri
+  const payload = Buffer.from(canonicalJson(unsigned), 'utf8')
+  const signature = policy.algorithm === 'EdDSA'
+    ? sign(null, payload, signingKey(policy))
+    : sign('sha256', payload, signingKey(policy))
+  return base64url(Buffer.from(canonicalJson({
+    ...unsigned,
+    signature: {
+      algorithm: policy.algorithm,
+      key_id: policy.key_id,
+      value: base64url(signature),
+    },
+  }), 'utf8'))
 }
 
 async function readBoundedJson(response, maxBytes) {
@@ -466,7 +839,7 @@ export function renderValue(value, tool) {
   return [{ type: 'text', text: rendered }]
 }
 
-export async function executeHttp(domain, tool, args, exec) {
+export async function executeHttp(domain, tool, args, exec, confirmationReceipt) {
   const configuredBaseUrl = requiredEnv(domain.baseUrlEnv)
   let parsedBaseUrl
   try {
@@ -517,6 +890,7 @@ export async function executeHttp(domain, tool, args, exec) {
   }
   if (tool.hasBody) headers['Content-Type'] = 'application/json'
   if (tool.idempotencyRequired) headers['Idempotency-Key'] = `shadow-dsh-${requestId}`
+  if (confirmationReceipt) headers['X-Shadow-Confirmation'] = confirmationReceipt
   const attempts = tool.retryPolicy === 'idempotent' ? 2 : 1
   let response
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -545,6 +919,92 @@ export async function executeHttp(domain, tool, args, exec) {
     throw new Error('summary-mode result must contain summary')
   }
   return value
+}
+
+async function executeMcp(ctx, tool, args, exec, confirmationReceipt) {
+  const mcpArgs = { ...args }
+  if (confirmationReceipt) {
+    if (!tool.confirmationArgument) {
+      throw new Error('confirmed MCP tool does not declare a receipt argument')
+    }
+    mcpArgs[tool.confirmationArgument] = confirmationReceipt
+  }
+  authorizedMcpParents.add(exec.token)
+  let result
+  try {
+    result = await ctx.tools.execute({
+      callId: `${exec.callId}:mcp`,
+      rootCallId: exec.rootCallId,
+      name: tool.mcpName,
+      arguments: mcpArgs,
+      parent: exec.token,
+      signal: exec.signal,
+    })
+  } finally {
+    authorizedMcpParents.delete(exec.token)
+  }
+  if (result.isError) throw new Error('MCP tool request failed')
+  const value = result.value?.structuredContent ?? { content: result.value?.content ?? [] }
+  boundedJson(value, tool.maxResultBytes)
+  return value
+}
+
+function stepArguments(step, args) {
+  const result = {}
+  for (const [name, mapping] of Object.entries(step.arguments)) {
+    if (Object.hasOwn(mapping, 'value')) {
+      result[name] = mapping.value
+      continue
+    }
+    const value = args[mapping.from_argument]
+    if (value === undefined || value === null) {
+      if (mapping.required === true) {
+        throw new Error(`workflow argument is missing: ${mapping.from_argument}`)
+      }
+      continue
+    }
+    result[name] = value
+  }
+  return result
+}
+
+async function executeComposition(ctx, tool, args, exec) {
+  const results = {}
+  for (const step of tool.steps) {
+    const outcome = await ctx.tools.execute({
+      callId: `${exec.callId}:workflow:${step.id}`,
+      rootCallId: exec.rootCallId,
+      name: step.runtimeName,
+      arguments: stepArguments(step, args),
+      agent: exec.agent,
+      parent: exec.token,
+      signal: exec.signal,
+    })
+    if (outcome.isError) {
+      if (!step.optional) throw new Error(`required workflow step failed: ${step.id}`)
+      results[step.id] = { ok: false, error: 'unavailable' }
+      continue
+    }
+    results[step.id] = { ok: true, value: outcome.value }
+  }
+  return {
+    summary: `Completed ${Object.values(results).filter((item) => item.ok).length}`
+      + ` of ${tool.steps.length} read-only Shadow workflow steps.`,
+    results,
+  }
+}
+
+export async function executeTool(ctx, domain, tool, args, exec) {
+  const confirmationReceipt = ['L3', 'L4'].includes(tool.riskLevel)
+    ? issueConfirmation(domain, tool, args, exec)
+    : undefined
+  if (tool.transport === 'http') {
+    return executeHttp(domain, tool, args, exec, confirmationReceipt)
+  }
+  if (tool.transport === 'mcp') {
+    return executeMcp(ctx, tool, args, exec, confirmationReceipt)
+  }
+  return executeComposition(ctx, tool, args, exec)
 }
 """
 
@@ -595,6 +1055,8 @@ def build_bundle(
         "shadow-plugin.schema.json",
         "shadow-tool-result.schema.json",
         "confirmation-receipt.schema.json",
+        "mcp-tool-catalog.schema.json",
+        "composition-workflow.schema.json",
     ):
         schema_path = contract_schema_path(platform_root, schema_name).resolve()
         input_labels[schema_path] = f"builder/contracts/{schema_name}"
@@ -643,12 +1105,76 @@ def build_bundle(
                 relative = contract_path.relative_to(plugin.root.resolve()).as_posix()
                 input_labels[contract_path] = f"plugins/{plugin_id}/{relative}"
 
+    tools_by_shadow_name = {
+        tool["shadowName"]: tool
+        for domain in compiled_domains
+        for tool in domain["tools"]
+        if tool["transport"] != "composition"
+    }
+    for domain in compiled_domains:
+        for tool in domain["tools"]:
+            if tool["transport"] != "composition":
+                continue
+            for step in tool["steps"]:
+                target = tools_by_shadow_name.get(step["tool_name"])
+                if target is None:
+                    raise PluginContractError(
+                        f"{tool['shadowName']}: workflow references unavailable tool "
+                        f"{step['tool_name']}"
+                    )
+                if target["capabilityId"] != step["capability_id"]:
+                    raise PluginContractError(
+                        f"{tool['shadowName']}: workflow capability does not own "
+                        f"{step['tool_name']}"
+                    )
+                if target["effect"] not in {"read", "analyze"}:
+                    raise PluginContractError(
+                        f"{tool['shadowName']}: initial composition workflows are read-only"
+                    )
+                step["runtimeName"] = target["name"]
+
+    high_risk_tools = [
+        tool
+        for domain in compiled_domains
+        for tool in domain["tools"]
+        if tool["riskLevel"] in {"L3", "L4"}
+    ]
+    if high_risk_tools and "confirmation" not in profile["policy"]:
+        raise PluginContractError(
+            "profiles selecting L3/L4 tools must configure confirmation signing"
+        )
+
+    capability_tools = {
+        tool["capabilityId"]: []
+        for domain in compiled_domains
+        for tool in domain["tools"]
+    }
+    for domain in compiled_domains:
+        for tool in domain["tools"]:
+            capability_tools.setdefault(tool["capabilityId"], []).append(tool["name"])
+    for domain in compiled_domains:
+        for skill in domain["skills"]:
+            activated = {
+                name
+                for capability_id in skill.pop("capabilityIds")
+                for name in capability_tools.get(capability_id, [])
+            }
+            for tool in domain["tools"]:
+                if tool["name"] not in activated or tool["transport"] != "composition":
+                    continue
+                activated.update(step["runtimeName"] for step in tool["steps"])
+            skill["toolNames"] = sorted(activated)
+
     tool_names = [tool["name"] for domain in compiled_domains for tool in domain["tools"]]
     if len(tool_names) != len(set(tool_names)):
         raise PluginContractError("DSH tool name collision across selected plugins")
     skill_names = [skill["name"] for domain in compiled_domains for skill in domain["skills"]]
     if len(skill_names) != len(set(skill_names)):
         raise PluginContractError("DSH skill name collision across selected plugins")
+    mcp_domains = [domain for domain in compiled_domains if domain["mcp"] is not None]
+    mcp_server_names = [domain["mcp"]["server_name"] for domain in mcp_domains]
+    if len(mcp_server_names) != len(set(mcp_server_names)):
+        raise PluginContractError("MCP server_name collision across selected plugin instances")
 
     tool_catalog_chars = sum(
         len(
@@ -707,6 +1233,7 @@ def build_bundle(
         "policy": {
             "preauthorizedCapabilities": profile["policy"]["preauthorized_capabilities"],
             "allowElevated": profile["policy"]["allow_elevated"],
+            "confirmation": deepcopy(profile["policy"].get("confirmation")),
         },
         "budgets": {
             "toolCatalogChars": tool_catalog_chars,
@@ -738,10 +1265,20 @@ def build_bundle(
         },
         "dsh": {"bundle": {"patch": "./cordis.patch.yml"}},
     }
+    if mcp_domains:
+        mcp_client_version = profile["runtime"].get("mcp_client_version")
+        if not mcp_client_version:
+            raise PluginContractError(
+                "profiles selecting MCP tools must pin runtime.mcp_client_version"
+            )
+        package["dependencies"] = {
+            "@deepseek-ai/dsh-mcp-client": mcp_client_version,
+        }
     patch = [
         {
             "insert": [
                 {"id": "shadow-policy", "name": f"{package_name}/policy"},
+                *[_mcp_patch_entry(domain) for domain in mcp_domains],
                 *[
                     {
                         "id": f"shadow-domain-{domain['pluginId'].removeprefix('shadow-')}",
@@ -754,7 +1291,7 @@ def build_bundle(
         }
     ]
     lock = {
-        "version": 3,
+        "version": 4,
         "build_id": build_id,
         "package_name": package_name,
         "package_version": package_version,
@@ -762,6 +1299,7 @@ def build_bundle(
         "runtime": "dsh",
         "runtime_distribution_version": profile["runtime"]["distribution_version"],
         "runtime_tools_api_version": profile["runtime"]["tools_api_version"],
+        "runtime_mcp_client_version": profile["runtime"].get("mcp_client_version"),
         "plugins": [
             {
                 "plugin_id": domain["pluginId"],
@@ -795,7 +1333,7 @@ def build_bundle(
     (target / "policy.js").write_text(POLICY_JS, encoding="utf-8")
     (target / "runtime.js").write_text(RUNTIME_JS, encoding="utf-8")
     runtime_manifest = {
-        "version": 1,
+        "version": 2,
         "adapter": "shadow-dsh",
         "profile_id": profile["id"],
         "build_id": build_id,
@@ -811,7 +1349,10 @@ def build_bundle(
                         "capability_id": tool["capabilityId"],
                         "shadow_name": tool["shadowName"],
                         "runtime_name": tool["name"],
+                        "transport": tool["transport"],
+                        "exposure": tool["exposure"],
                         "risk_level": tool["riskLevel"],
+                        "confirmation_required": tool["riskLevel"] in {"L3", "L4"},
                         "result_mode": tool["resultMode"],
                         "max_result_bytes": tool["maxResultBytes"],
                         "max_model_chars": tool["maxModelChars"],

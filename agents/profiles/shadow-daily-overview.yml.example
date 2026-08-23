@@ -1,0 +1,29 @@
+version: 1
+id: shadow-daily-overview
+runtime:
+  kind: dsh
+  distribution_version: 0.1.1-rc.2
+  tools_api_version: 0.1.1-rc.2
+  mcp_client_version: 0.1.1-rc.2
+plugins:
+  - plugin_id: shadow-health
+    instance_id: health-production
+    capabilities: [health.summary.read]
+  - plugin_id: shadow-ledger
+    instance_id: ledger-production
+    capabilities: [ledger.summary.read]
+  - plugin_id: shadow-daily-overview
+    instance_id: daily-overview-production
+    capabilities: [shadow.daily-overview.read]
+policy:
+  preauthorized_capabilities: [shadow.daily-overview.read]
+  allow_elevated: true
+  confirmation:
+    issuer: shadow-daily-overview
+    key_id: REPLACE_WITH_CONFIRMATION_KEY_ID
+    algorithm: EdDSA
+    private_key_file_env: SHADOW_CONFIRMATION_PRIVATE_KEY_FILE
+    ttl_seconds: 300
+budgets:
+  max_tool_catalog_chars: 30000
+  max_skill_catalog_chars: 6000

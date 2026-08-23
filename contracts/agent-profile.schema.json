@@ -15,7 +15,8 @@
       "properties": {
         "kind": { "const": "dsh" },
         "distribution_version": { "$ref": "#/$defs/semver" },
-        "tools_api_version": { "$ref": "#/$defs/semver" }
+        "tools_api_version": { "$ref": "#/$defs/semver" },
+        "mcp_client_version": { "$ref": "#/$defs/semver" }
       }
     },
     "plugins": {
@@ -52,7 +53,25 @@
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/qualified_id" }
         },
-        "allow_elevated": { "type": "boolean" }
+        "allow_elevated": { "type": "boolean" },
+        "confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "issuer",
+            "key_id",
+            "algorithm",
+            "private_key_file_env",
+            "ttl_seconds"
+          ],
+          "properties": {
+            "issuer": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "key_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "algorithm": { "enum": ["EdDSA", "ES256"] },
+            "private_key_file_env": { "$ref": "#/$defs/env_name" },
+            "ttl_seconds": { "type": "integer", "minimum": 1, "maximum": 900 }
+          }
+        }
       }
     },
     "budgets": {
@@ -82,6 +101,7 @@
     "qualified_id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
-    }
+    },
+    "env_name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,127}$" }
   }
 }

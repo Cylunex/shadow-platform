@@ -1,0 +1,35 @@
+version: 1
+workflows:
+  - operation_id: get_daily_overview
+    parameters:
+      type: object
+      additionalProperties: false
+      required: [health_profile_id]
+      properties:
+        health_profile_id:
+          type: string
+          description: 已授权的 Health Profile ID
+        date:
+          type: string
+          description: 可选的健康摘要日期
+        month:
+          type: string
+          description: 可选的 Ledger 月份 YYYY-MM
+        currency:
+          type: string
+          description: 可选的三字母币种
+    steps:
+      - id: health-summary
+        capability_id: health.summary.read
+        tool_name: health.summary.read
+        arguments:
+          profile_id: { from_argument: health_profile_id, required: true }
+          date: { from_argument: date }
+        optional: true
+      - id: ledger-summary
+        capability_id: ledger.summary.read
+        tool_name: ledger.summary.get
+        arguments:
+          month: { from_argument: month }
+          currency: { from_argument: currency }
+        optional: true

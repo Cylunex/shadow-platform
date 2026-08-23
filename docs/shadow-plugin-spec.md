@@ -13,9 +13,9 @@ Runtime 直接调用领域服务；Platform 不转发 LLM、HTTP、MCP 或领域
 
 `ShadowDomainPlugin` 对应一个拥有领域数据和 API 的独立应用。`ShadowCompositionPlugin`
 只声明跨两个及以上领域的 Skill、Prompt、Eval 和能力依赖，不拥有领域数据库。Composition
-源码不进入 DSH 进程；Platform 可以把经过校验的只读 Skill 快照编译进目标 Runtime。
-首期只实现 Domain Plugin；Composition Plugin 仅保留合同位置，不能将跨项目业务逻辑放进
-Platform 核心。
+的声明式 Workflow 与经过校验的只读 Skill 快照可编译进目标 Runtime。Workflow 只能组合
+Profile 已选中的只读领域能力，业务事实仍由各领域服务返回。首个实现是
+`compositions/shadow-daily-overview`，Platform 核心不保存组合结果或领域正文。
 
 ## 3. Definition 与 Instance
 
@@ -53,6 +53,8 @@ travel-production:
 ```
 
 运行时从受限环境读取真实值。一个 Definition 可以对应开发、测试和生产多个 Instance。
+只有选中 HTTP 工具的 Instance 必须配置 `base_url_env` 与 `credential_env`；MCP-only Instance
+使用自己的 `mcp` 配置，Composition Instance 不需要伪造地址或凭据字段。
 
 ## 4. Agent Capability v2
 
@@ -60,11 +62,13 @@ travel-production:
 
 - Manifest 声明 capability、effect、数据等级、风险、确认、幂等和工具暴露策略；
 - OpenAPI 声明 HTTP operation、参数、请求体和返回结构；
-- MCP Tool Schema 声明 MCP 工具结构；
+- MCP Tool Catalog 声明 MCP 工具的静态输入输出结构；
+- Composition Workflow 声明跨项目只读步骤和最小参数映射；
 - Skill 只指导模型如何正确使用能力，不能放宽合同或服务端策略。
 
-每个工具必须声明 `contract_ref`、`operation_id`、超时、并发安全、重试、结果模式和最大结果
-字节数。`max_result_bytes` 限制领域服务响应，`max_model_chars` 独立限制实际渲染给模型的内容。
+每个工具必须声明 `transport`、`contract_ref`、`operation_id`、超时、并发安全、重试、结果
+模式和最大结果字节数。HTTP 使用 OpenAPI，MCP 使用静态 Tool Catalog，Composition 使用
+Workflow。`max_result_bytes` 限制领域服务响应，`max_model_chars` 独立限制实际渲染给模型的内容。
 DSH Adapter 将稳定 Shadow 工具名转换成 `shadow_<domain>_<resource>_<verb>`，映射进入
 Bundle lock 和 `shadow-runtime-manifest.json`。能力 ID 保持 `<domain>.<resource>.<verb>`，不再
 重复添加 `shadow.` 前缀。
@@ -91,6 +95,10 @@ capability、tool、effect、参数摘要、资源、有效期与单次 nonce，
 Approval 只能表达当次会话中的允许，不能替代该回执。L0/L1 不使用回执；L2 默认依赖 Profile
 预授权和领域鉴权。
 
+HTTP 通过 `X-Shadow-Confirmation` 传递回执；MCP 能力必须声明一个不暴露给模型的
+`confirmation_argument`。所有删除 capability 还必须声明至少保留一项的
+`destructive_limits`，最终数量检查在领域服务内执行。
+
 ## 6. 结果合同
 
 领域 API 保持自己的业务响应 Schema；Adapter 将需要跨 Runtime 表达的结果归一为
@@ -113,7 +121,7 @@ enabled → disabled → removed
 
 ## 8. 运行时 Profile
 
-Profile 明确选择插件实例、能力集合、预授权规则和模型暴露预算。一个 Profile 只允许每个
+Profile 明确选择插件实例、能力集合、预授权规则、模型暴露预算和签名回执配置。一个 Profile 只允许每个
 Plugin/Instance 出现一次，生成一份不可变 Bundle、`agent-bundle.lock` 与
 `shadow-runtime-manifest.json`。普通 Profile 不包含 L4 工具；Health、Ledger 和 Foliant 使用
 分离的 Profile 与会话存储。
@@ -130,20 +138,23 @@ Foliant 后续增加 `shadow-finance-research`；执行 Profile 只预留名称�
 
 DSH 的发行版版本与宿主 npm API 版本分别管理。当前 `0.1.1` 版本线的实机基线为
 `0.1.1-rc.2`。Plugin 使用兼容范围声明能力，Builder 会实际校验 Profile 的精确版本是否落入
-范围；生成 Bundle 使用精确 Tools API 版本作为 peer dependency。禁止把 DSH 宿主包放入普通
-`dependencies`，避免 Profile 内产生第二份宿主运行时。
+范围；生成 Bundle 使用精确 Tools API 版本作为 peer dependency。MCP Profile 还要精确锁定
+官方 MCP Client，并把它作为 Bundle dependency；禁止把 DSH Tools 宿主包放入普通
+dependencies，避免 Profile 内产生第二份宿主运行时。
 
 ## 9. DSH Adapter 边界
 
 所有领域共用一份生成的 DSH Bundle。Bundle 内部可以分为 Remote、Policy、Skill 和 UI
-模块，但在出现独立发布周期前不拆成多个 npm 包。每个领域实例只生成一条 Cordis 配置；
-Adapter 按 `instanceId` 读取正确的地址和凭据环境变量，然后直接调用领域 API。Platform 负责
+模块，但在出现独立发布周期前不拆成多个 npm 包。HTTP/Composition 领域实例各生成 Adapter
+配置，每个 MCP Server 生成一个官方 MCP Client Cordis 实例；Adapter 按 `instanceId` 读取
+正确的地址和凭据环境变量，然后直接调用领域 API。Platform 负责
 配置、合同、令牌与审计控制面，不转发领域响应流量。
 
 正式 Shadow Profile 不包含 Dynamic Extension 或外部市场安装入口。实验性扩展使用不同
 Profile、DSH_HOME 和凭据边界，不能注册正式领域能力 ID。
 
-## 10. 首期范围
+## 10. 当前范围
 
-Platform 先完成协议、校验、DSH Builder 与 conformance fixture，再依次接入 Travel、Archive、
-Health、Ledger。Garden 和 Foliant 进入第二批。Verse、Wingman 和 Chronicle 不在本轮范围。
+Platform 已完成协议、校验、HTTP/MCP/Composition Builder、按需 Skill 工具限制、L3/L4 回执和
+conformance fixture。领域首批为 Travel、Archive、Health、Ledger；Garden 和 Foliant 在后续
+正常改造时接入。Verse、Wingman 和 Chronicle 不在本轮范围。

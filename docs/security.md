@@ -74,5 +74,10 @@ Media 与 Telemetry 共用服务 Token 摘要 registry，每个应用最多同�
 - Capability Manifest 是发现和编排元数据，不是授权来源；Skill/Prompt 不能放宽服务端策略。
 - 读取个人或敏感资源时还要检查项目数据库中的资源授权；Travel 地图授权是标准参考实现。
 - 高风险写入优先生成结构化草案，用户确认后由确定性 API 应用；Prompt 输出不是确认凭据。
+- L3/L4 最终执行只接受短时签名 `ConfirmationReceipt`。回执必须绑定规范化参数摘要、资源、
+  audience、capability、actor 和单次 nonce；领域服务持久化防重放，相同幂等请求才可重试。
+- 删除操作可以开放，但必须在领域事务中至少保留一项受保护记录；回执不能授权删空集合。
+- MCP 原始 `mcp__*` 工具不直接暴露给模型；所有调用经过 Shadow Wrapper，按需工具限制只控制
+  可见性，不能被当作服务端授权。
 - Token 轮换窗口最多同时接受两份摘要，完成切换后立即移除旧摘要。
 - 未设计用户委托令牌前，不信任 Agent 自报的 `actor_sub`。

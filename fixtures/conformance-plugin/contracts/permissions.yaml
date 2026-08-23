@@ -5,3 +5,6 @@ scopes:
   - conformance.drafts.create
   - conformance.records.apply
   - conformance.records.publish
+  - conformance.records.delete
+  - conformance.mcp.read
+  - conformance.mcp.delete

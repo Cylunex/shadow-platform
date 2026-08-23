@@ -7,4 +7,16 @@ instances:
     base_url_env: SHADOW_CONFORMANCE_BASE_URL
     credential_env: SHADOW_CONFORMANCE_TOKEN
     health_path: /healthz
+    mcp:
+      server_name: conformance
+      transport: streamable-http
+      url_env: SHADOW_CONFORMANCE_MCP_URL
+      bearer_token_env: SHADOW_CONFORMANCE_MCP_TOKEN
+      tool_call_timeout_ms: 5000
+      fail_on_startup_error: true
+      reconnect:
+        enabled: true
+        initial_delay_ms: 500
+        max_delay_ms: 30000
+        max_attempts: 10
     enabled: true

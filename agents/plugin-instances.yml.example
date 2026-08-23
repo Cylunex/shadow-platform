@@ -16,3 +16,24 @@ instances:
     credential_env: SHADOW_ARCHIVE_AGENT_TOKEN
     health_path: /healthz
     enabled: true
+  health-production:
+    plugin_id: shadow-health
+    plugin_version: 0.1.0
+    environment: production
+    base_url_env: SHADOW_HEALTH_BASE_URL
+    credential_env: SHADOW_HEALTH_AGENT_TOKEN
+    health_path: /healthz
+    enabled: true
+  ledger-production:
+    plugin_id: shadow-ledger
+    plugin_version: 1.0.0
+    environment: production
+    base_url_env: SHADOW_LEDGER_BASE_URL
+    credential_env: SHADOW_LEDGER_AGENT_TOKEN
+    health_path: /healthz
+    enabled: true
+  daily-overview-production:
+    plugin_id: shadow-daily-overview
+    plugin_version: 1.0.0
+    environment: production
+    enabled: true

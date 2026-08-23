@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info: { title: Composition Health Fixture, version: 0.1.0 }
+paths:
+  /api/agent/profiles/{profile_id}/summary:
+    get:
+      operationId: get_health_summary
+      parameters:
+        - { name: profile_id, in: path, required: true, schema: { type: string } }
+        - { name: date, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [summary]
+                properties: { summary: { type: string } }

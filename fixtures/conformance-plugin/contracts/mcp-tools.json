@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "server_name": "conformance",
+  "tools": [
+    {
+      "name": "read_record",
+      "description": "Read one conformance record through MCP",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record_id"],
+        "properties": {
+          "record_id": { "type": "string" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["summary", "resource_uri"],
+        "properties": {
+          "summary": { "type": "string" },
+          "resource_uri": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "delete_records",
+      "description": "Delete some records while preserving at least one",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record_ids", "shadow_confirmation"],
+        "properties": {
+          "record_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "shadow_confirmation": { "type": "string" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["summary", "remaining"],
+        "properties": {
+          "summary": { "type": "string" },
+          "remaining": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  ]
+}

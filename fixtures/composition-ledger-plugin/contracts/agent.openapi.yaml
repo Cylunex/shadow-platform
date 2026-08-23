@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info: { title: Composition Ledger Fixture, version: 1.0.0 }
+paths:
+  /api/agent/summary:
+    get:
+      operationId: get_ledger_summary
+      parameters:
+        - { name: month, in: query, required: false, schema: { type: string } }
+        - { name: currency, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true

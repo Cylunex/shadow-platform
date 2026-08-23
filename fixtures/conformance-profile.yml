@@ -4,6 +4,7 @@ runtime:
   kind: dsh
   distribution_version: 0.1.1-rc.2
   tools_api_version: 0.1.1-rc.2
+  mcp_client_version: 0.1.1-rc.2
 plugins:
   - plugin_id: shadow-conformance
     instance_id: conformance-test
@@ -11,7 +12,13 @@ plugins:
 policy:
   preauthorized_capabilities:
     - conformance.records.apply
-  allow_elevated: false
+  allow_elevated: true
+  confirmation:
+    issuer: shadow-conformance-profile
+    key_id: conformance-key
+    algorithm: EdDSA
+    private_key_file_env: SHADOW_CONFIRMATION_PRIVATE_KEY_FILE
+    ttl_seconds: 300
 budgets:
   max_tool_catalog_chars: 20000
   max_skill_catalog_chars: 4000

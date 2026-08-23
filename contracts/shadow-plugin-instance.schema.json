@@ -28,8 +28,6 @@
         "plugin_id",
         "plugin_version",
         "environment",
-        "base_url_env",
-        "credential_env",
         "enabled"
       ],
       "properties": {
@@ -41,6 +39,60 @@
         "health_path": {
           "type": "string",
           "pattern": "^/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$"
+        },
+        "mcp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["server_name", "transport", "fail_on_startup_error", "reconnect"],
+          "properties": {
+            "server_name": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,32}$"
+            },
+            "transport": { "enum": ["streamable-http", "stdio"] },
+            "url_env": { "$ref": "#/$defs/env_name" },
+            "bearer_token_env": { "$ref": "#/$defs/env_name" },
+            "command": { "type": "string", "minLength": 1, "maxLength": 512 },
+            "args": {
+              "type": "array",
+              "maxItems": 64,
+              "items": { "type": "string", "maxLength": 2048 }
+            },
+            "cwd_env": { "$ref": "#/$defs/env_name" },
+            "env_forward": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 64,
+              "items": { "$ref": "#/$defs/env_name" }
+            },
+            "tool_call_timeout_ms": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 300000
+            },
+            "fail_on_startup_error": { "type": "boolean" },
+            "reconnect": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "initial_delay_ms", "max_delay_ms", "max_attempts"],
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "initial_delay_ms": { "type": "integer", "minimum": 1 },
+                "max_delay_ms": { "type": "integer", "minimum": 1 },
+                "max_attempts": { "type": "integer", "minimum": 1 }
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "transport": { "const": "streamable-http" } } },
+              "then": { "required": ["url_env", "bearer_token_env"] }
+            },
+            {
+              "if": { "properties": { "transport": { "const": "stdio" } } },
+              "then": { "required": ["command", "args", "env_forward"] }
+            }
+          ]
         },
         "enabled": { "type": "boolean" }
       }

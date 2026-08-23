@@ -2,3 +2,14 @@ version: 1
 confirmations:
   - capability: conformance.records.publish
     mode: explicit
+  - capability: conformance.records.delete
+    mode: elevated
+    destructive_limits:
+      count_argument: record_ids
+      min_remaining: 1
+  - capability: conformance.mcp.delete
+    mode: elevated
+    receipt_argument: shadow_confirmation
+    destructive_limits:
+      count_argument: record_ids
+      min_remaining: 1

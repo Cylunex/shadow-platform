@@ -205,11 +205,29 @@ def validate_capability_semantics(manifest: dict[str, Any]) -> list[str]:
             errors.append(f"{capability_id}:high-impact-risk-too-low")
         if effect == "execute" and risk_level not in {"L3", "L4"}:
             errors.append(f"{capability_id}:execute-risk-too-low")
+        if effect == "delete":
+            limits = capability.get("destructive_limits")
+            if not isinstance(limits, dict) or limits.get("min_remaining", 0) < 1:
+                errors.append(f"{capability_id}:delete-must-preserve-at-least-one-item")
+        elif "destructive_limits" in capability:
+            errors.append(f"{capability_id}:destructive-limits-only-valid-for-delete")
+        resource = capability.get("confirmation_resource")
+        if resource is not None:
+            placeholders = set(re.findall(r"\{([A-Za-z][A-Za-z0-9_]*)\}", resource["template"]))
+            declared = set(resource["arguments"])
+            if placeholders != declared:
+                errors.append(f"{capability_id}:confirmation-resource-arguments-mismatch")
         for tool in tools:
             if tool.get("retry_policy") == "idempotent" and not (
                 effect in {"read", "analyze"} or idempotent is True
             ):
                 errors.append(f"{tool.get('name')}:unsafe-idempotent-retry")
+            if (
+                tool.get("transport") == "mcp"
+                and risk_level in {"L3", "L4"}
+                and not tool.get("confirmation_argument")
+            ):
+                errors.append(f"{tool.get('name')}:confirmed-mcp-tool-needs-receipt-argument")
     if len(tool_names) != len(set(tool_names)):
         errors.append("duplicate tool names")
     return errors
@@ -246,12 +264,61 @@ def validate_plugin(plugin_root: Path, platform_root: Path) -> ValidatedPlugin:
         if definition["metadata"]["id"] != expected:
             raise PluginContractError(f"domain plugin id must be {expected}")
 
+    transports = {
+        tool["transport"]
+        for capability in manifest["capabilities"]
+        for tool in capability["tools"]
+    }
+    if definition["kind"] == "ShadowCompositionPlugin" and transports != {"composition"}:
+        raise PluginContractError("composition plugins may contain only composition tools")
+    if definition["kind"] == "ShadowDomainPlugin" and "composition" in transports:
+        raise PluginContractError("domain plugins cannot contain composition tools")
+
     agent_dir = descriptor_paths["agent"].parent
     for skill in manifest["skills"]:
         resolve_inside(agent_dir, skill["path"], label=f"skill {skill['id']}")
     for capability in manifest["capabilities"]:
         for tool in capability["tools"]:
-            resolve_inside(root, tool["contract_ref"], label=f"tool {tool['name']} contract")
+            contract_path = resolve_inside(
+                root, tool["contract_ref"], label=f"tool {tool['name']} contract"
+            )
+            if tool["transport"] == "mcp":
+                catalog = load_document(contract_path)
+                validate_document(
+                    catalog,
+                    contract_schema_path(platform_root, "mcp-tool-catalog.schema.json"),
+                    label=f"MCP catalog for {tool['name']}",
+                )
+                matching = [
+                    item for item in catalog["tools"] if item["name"] == tool["operation_id"]
+                ]
+                if len(matching) != 1:
+                    raise PluginContractError(
+                        f"MCP tool not found exactly once: {tool['operation_id']}"
+                    )
+                confirmation_argument = tool.get("confirmation_argument")
+                if confirmation_argument is not None:
+                    properties = matching[0]["inputSchema"].get("properties", {})
+                    if confirmation_argument not in properties:
+                        raise PluginContractError(
+                            f"{tool['name']}: MCP confirmation argument is absent from inputSchema"
+                        )
+            elif tool["transport"] == "composition":
+                workflow = load_document(contract_path)
+                validate_document(
+                    workflow,
+                    contract_schema_path(platform_root, "composition-workflow.schema.json"),
+                    label=f"composition workflow for {tool['name']}",
+                )
+                matching = [
+                    item
+                    for item in workflow["workflows"]
+                    if item["operation_id"] == tool["operation_id"]
+                ]
+                if len(matching) != 1:
+                    raise PluginContractError(
+                        f"composition workflow not found exactly once: {tool['operation_id']}"
+                    )
     return ValidatedPlugin(root, definition, manifest, descriptor_paths)
 
 

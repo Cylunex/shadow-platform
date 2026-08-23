@@ -1,0 +1,36 @@
+version: 2
+app_id: shadow
+package_version: 1.0.0
+skills:
+  - id: shadow-daily-overview
+    path: skills/shadow-daily-overview/SKILL.md
+    summary: 同时读取已授权的健康日摘要和月度财务摘要，生成一个最小披露的每日概览
+    capabilities:
+      - shadow.daily-overview.read
+    invocation:
+      model: true
+      user: true
+capabilities:
+  - id: shadow.daily-overview.read
+    summary: 组合 Health 与 Ledger 的两个只读结果，不复制或持久化领域正文
+    audience: shadow
+    scopes: [shadow.daily-overview.read]
+    tools:
+      - name: shadow.daily-overview.read
+        transport: composition
+        contract_ref: contracts/workflows.yaml
+        operation_id: get_daily_overview
+        exposure: on-demand
+        result_mode: full
+        max_result_bytes: 32768
+        max_model_chars: 8000
+        timeout_ms: 30000
+        concurrency_safe: true
+        retry_policy: idempotent
+    effect: read
+    data_classification: sensitive
+    risk_level: L2
+    confirmation: policy
+    reversible: true
+    resource_grant_required: true
+    idempotency_required: false

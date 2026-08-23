@@ -6,8 +6,10 @@ DSH 是 Shadow 当前的第一参考 Agent Runtime。Shadow 合同保持运行�
 Profile 编译成 DSH 原生 Bundle；领域项目不导入 Cordis 或 DSH 依赖。
 
 当前接入基线是 DSH `0.1.1` 版本线；已在 Linux + Node 22 环境核对的精确运行时为
-`@deepseek-ai/dsh@0.1.1-rc.2` 与 `@deepseek-ai/dsh-tools@0.1.1-rc.2`。Profile 必须分别锁定
-`distribution_version` 和 `tools_api_version`，实际部署前再与目标机解析版本比对。
+`@deepseek-ai/dsh@0.1.1-rc.2`、`@deepseek-ai/dsh-tools@0.1.1-rc.2` 与
+`@deepseek-ai/dsh-mcp-client@0.1.1-rc.2`。Profile 必须分别锁定 `distribution_version`、
+`tools_api_version`；使用 MCP 时还要锁定 `mcp_client_version`，实际部署前再与目标机解析版本
+比对。
 
 生成的 Bundle 使用 DSH 标准 `package.json` 中的 `dsh.bundle.patch` 和 `cordis.patch.yml`，
 每个领域实例对应独立 Cordis Plugin fiber：
@@ -48,8 +50,9 @@ Builder 会复制每个 Skill 所在目录，而不只嵌入 `SKILL.md`。Skill 
 
 生产构建必须固定 DSH 发行版及 Tools API 版本，设置 `SOURCE_DATE_EPOCH`，并从部署环境注入
 `base_url_env` 与 `credential_env` 指向的值。构建产物不得提交真实地址、Token 或用户数据。
-生成包只把 `@deepseek-ai/dsh-tools` 声明为 peer dependency；不得改成普通 dependency，避免
-Profile 本地安装第二份宿主包并破坏 Cordis 服务实例一致性。
+生成包只把宿主 `@deepseek-ai/dsh-tools` 声明为 peer dependency，官方
+`@deepseek-ai/dsh-mcp-client` 则以 Profile 精确锁定的普通 dependency 安装。不得把 Tools API
+改成普通 dependency，避免 Profile 本地安装第二份宿主包并破坏 Cordis 服务实例一致性。
 
 开发环境可以安装本地预构建包进行检查：
 
@@ -72,8 +75,8 @@ DSH、Tools API、Node、pnpm 和 Profile lock 摘要。
 DSH Tool
   → Shadow Policy
   → DSH Approval（需要时只允许一次）
-  → Shadow monotonic guard
-  → 领域 HTTP/MCP
+  → Shadow monotonic guard + 短时签名 ConfirmationReceipt（L3/L4）
+  → 领域 HTTP / Shadow MCP Wrapper / Composition
   → 有界结构化结果
   → DSH Session
 ```
@@ -89,15 +92,21 @@ DSH 原生 Approval 只提供一次性的允许或拒绝，所以长期预授权
 
 - L0/L1 继续执行，不弹窗；
 - L2 在 capability 已预授权时继续执行，否则返回 `ask`；
-- L3 始终 `ask`；
-- L4 在普通 Profile 中由 guard 拒绝。
+- L3 始终 `ask`，获准后才签发当次短时回执；
+- L4 在普通 Profile 中由 guard 拒绝；只有 `allow_elevated` 的隔离 Profile 才能询问并签发回执。
 
 普通 Bundle 对发布、批量删除和资金执行优先暴露 `*.propose`，最终应用仍由领域服务或
 Shadow App 持有的确认凭证完成。
 
 通用 `ConfirmationReceipt` 合同位于 `contracts/confirmation-receipt.schema.json`。它只用于
-L3/L4 最终执行并绑定参数摘要、资源、actor、有效期和单次 nonce。当前 Adapter 只落实 DSH
-会话级 Approval；在第一个 L3 最终执行能力开放前，必须完成回执签发、传递、验签与防重放。
+L3/L4 最终执行并绑定参数摘要、资源、actor、有效期和单次 nonce。Adapter 在 DSH Approval
+通过后、实际调用前用部署环境中的 Ed25519 或 P-256 私钥签发，HTTP 通过
+`X-Shadow-Confirmation` 传递，MCP 通过 Manifest 声明的保留参数传递。领域服务使用
+`shadow_sdk.confirmation` 验签、校验最长 15 分钟有效期并持久化消费 nonce；相同回执只有在
+幂等键相同的重试中才可返回既有结果。
+
+删除能力必须声明 `destructive_limits.min_remaining >= 1`，并由领域服务按真实资源总数再次
+检查。Platform 允许删除，但不会生成可以清空受保护集合的能力。
 
 ## 5. 参考插件结论
 
@@ -115,14 +124,21 @@ Cordis 适配层：注册 Skill 和 Tool、应用 Profile 策略，然后直接�
 
 ## 6. 当前实现边界
 
-P0 Builder 已实现 HTTP/OpenAPI 到 DSH 原生 Tool 的确定性编译，并为同一 Profile 生成单一
-通用 Bundle；每个领域由 `instanceId` 精确绑定 Cordis 配置。合同已经预留 MCP，但 MCP
-Adapter 尚未实现，构建时会明确拒绝 MCP 工具，不能静默降级为通用 HTTP 调用。Health 等项目
-接入前应完成每 MCP Server 一个 Cordis Plugin 实例的适配和相同的策略、结果边界测试。
+Builder 已实现 HTTP/OpenAPI、MCP 静态 Tool Catalog 和只读 Composition Workflow 到 DSH
+原生 Bundle 的确定性编译。每个 MCP Server 生成一个官方 MCP Client Cordis 实例，Shadow
+Wrapper 使用与官方客户端一致的公开工具名算法调用底层工具；原始 `mcp__*` 工具不向模型
+暴露，也不能绕过 Wrapper 的风险、结果和确认策略。MCP Server 晚启动或重连时，Policy 会在
+`tools/change` 后重新应用限制。
 
-`hidden` 工具不会注册进 DSH。`on-demand` 工具当前仍会注册；按 Skill 动态替换
-agent-scope 的 `ctx.tools.restrict()` 仍属于下一阶段，因此 `on-demand` 只是发现策略，不能
-被当作权限边界。
+`hidden` 工具不会注册进 DSH。`on-demand` 工具只有在对应 Skill 被成功读取，或显式 `/skill`
+注入生效后，才加入该 Agent 的 `ctx.tools.restrict()` 可见集合；已激活 Skill 从持久化 Session
+中的成功 tool call/result 对恢复。该限制只控制模型可见性，不替代领域服务的 audience、
+scope、资源授权和确认检查。
+
+Composition 采用经过 Schema 校验的顺序步骤，只能引用当前 Profile 已选择的 L0 只读/分析
+能力，并通过 DSH ToolRuntime 嵌套调用保持各领域独立凭据。首个可运行示例是
+`compositions/shadow-daily-overview`，组合 Health 与 Ledger 摘要，不保存领域正文。写入编排、
+并行 DAG、补偿事务和持久队列仍不属于这一版。
 
 正式 Profile 不安装 Dynamic Extension 或外部市场入口。这里通过 Profile 包组成和内部
 allowlist 实现，而不是依赖尚未验证的假定配置字段。领域不可用不会阻止 Adapter 注册，失败
