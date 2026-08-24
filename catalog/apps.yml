@@ -101,3 +101,17 @@ apps:
     media: false
     llm_models: []
     agent_audience: false
+
+  nexus:
+    title: Shadow Nexus
+    owner: example-owner
+    lifecycle: production
+    kind: web
+    canonical_url: https://nexus.example.com/
+    auth:
+      mode: forward-auth
+      groups: [shadow-users]
+    health_path: /healthz
+    media: false
+    llm_models: []
+    agent_audience: false

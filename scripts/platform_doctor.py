@@ -227,6 +227,13 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
                 auth_mode_errors.append(f"{app.app_id}:oidc-kind={app.kind}")
             if not app.auth.groups:
                 auth_mode_errors.append(f"{app.app_id}:oidc-without-groups")
+        if app.auth.mode == "forward-auth":
+            if app.kind != "web":
+                auth_mode_errors.append(f"{app.app_id}:forward-auth-kind={app.kind}")
+            if not app.auth.groups:
+                auth_mode_errors.append(f"{app.app_id}:forward-auth-without-groups")
+            if app.agent_audience:
+                auth_mode_errors.append(f"{app.app_id}:forward-auth-with-agent-audience")
         if app.auth.mode == "service-bearer":
             if app.kind != "service":
                 auth_mode_errors.append(f"{app.app_id}:service-bearer-kind={app.kind}")
@@ -241,7 +248,7 @@ def inspect_platform(root: Path, *, strict: bool = False) -> list[CheckResult]:
             (
                 ", ".join(auth_mode_errors)
                 if auth_mode_errors
-                else "OIDC and service Bearer roles valid"
+                else "OIDC, Forward Auth and service Bearer roles valid"
             ),
         )
     )

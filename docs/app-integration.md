@@ -165,3 +165,8 @@ Agent Registry 的 scope 只完成机器主体的粗粒度准入。项目仍须�
 
 Health 当前仍使用 Forward Auth / Hybrid，这是已经完成的旧项目改造，不继续扩展到其他
 项目。维护 Health 时参考其项目文档；设计新项目时只遵循本文的原生 OIDC 路径。
+
+Shadow Nexus 是托管在第三方 DSH Web 内的界面，DSH 当前没有原生 OIDC 接入点，因此它的独立
+公网域名允许使用 Authelia Forward Auth 保护整套 HTML、静态资源、API 和 WebSocket。这个门禁
+只决定能否进入 Nexus，不向领域服务传递用户授权；Nexus 的 Health、Ledger 等机器调用仍必须
+使用彼此独立的 Agent Bearer。局域网字面 IP 是否免认证属于仓库外部署策略，不进入应用目录。
