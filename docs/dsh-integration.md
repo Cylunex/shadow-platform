@@ -142,8 +142,13 @@ Composition 采用经过 Schema 校验的顺序步骤，只能引用当前 Profi
 
 `agents/profiles/shadow-nexus.yml.example` 是统一 Web 工作台的组合边界：Health 与 Ledger 仍是
 两个独立插件实例、两组独立 Bearer 凭据和两套资源授权。Nexus Browser 插件不持有凭据；Host
-侧只从部署环境读取与 Builder 相同的 `SHADOW_HEALTH_*`、`SHADOW_LEDGER_*` 变量。摘要读取为
-L0，草稿创建为可撤销 L1；Nexus Review 的“确认”只创建领域草稿，不等价于领域事实确认。
+侧只从部署环境读取与 Builder 相同的 `SHADOW_HEALTH_*`、`SHADOW_LEDGER_*` 变量。模型 Profile
+只选择 L0 读取能力，不再选择任何领域 draft/write capability。模型只能把结构化 Proposal 返回给
+Nexus；Nexus Review 在用户确认后由 Host 通过隐藏权限创建并提交同一条领域草稿。
+
+领域服务仍拥有草稿与正式事实。由旧版本 Agent 或领域原生流程产生、且允许 Nexus 审核的草稿，
+通过隐藏的 pending 接口以引用方式汇入 Nexus Review；Nexus 不复制领域事实表。提示词不是写权限
+边界，任何仅靠“不要调用工具”而仍向模型暴露 draft capability 的 Profile 都不符合该设计。
 
 正式 Profile 不安装 Dynamic Extension 或外部市场入口。这里通过 Profile 包组成和内部
 allowlist 实现，而不是依赖尚未验证的假定配置字段。领域不可用不会阻止 Adapter 注册，失败

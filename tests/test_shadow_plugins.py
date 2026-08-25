@@ -398,6 +398,24 @@ def test_profile_cannot_select_unknown_capability(tmp_path):
         )
 
 
+def test_shadow_nexus_model_profile_is_read_only() -> None:
+    profile = yaml.safe_load(
+        (ROOT / "agents" / "profiles" / "shadow-nexus.yml.example").read_text(
+            encoding="utf-8"
+        )
+    )
+    selected = {
+        capability
+        for plugin in profile["plugins"]
+        for capability in plugin["capabilities"]
+    }
+
+    assert selected
+    assert all(capability.endswith(".read") for capability in selected)
+    assert "health.records.draft" not in selected
+    assert "ledger.records.draft" not in selected
+
+
 def test_profile_model_exposure_budget_is_enforced(tmp_path):
     profile_path = tmp_path / "profile.yml"
     profile = yaml.safe_load(

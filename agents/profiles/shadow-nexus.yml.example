@@ -11,14 +11,12 @@ plugins:
     capabilities:
       - health.summary.read
       - health.trends.read
-      - health.records.draft
   - plugin_id: shadow-ledger
     instance_id: ledger-production
     capabilities:
       - ledger.summary.read
       - ledger.records.read
       - ledger.budgets.read
-      - ledger.records.draft
   - plugin_id: shadow-daily-overview
     instance_id: daily-overview-production
     capabilities:
