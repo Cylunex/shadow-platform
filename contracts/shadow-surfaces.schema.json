@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-surfaces-v1.json",
+  "title": "Shadow Runtime Surfaces",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "presentation", "surfaces"],
+  "properties": {
+    "version": { "const": 1 },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["short_id", "title", "caption", "icon", "color", "order"],
+      "properties": {
+        "short_id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "caption": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "icon": { "$ref": "#/$defs/id" },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "order": { "type": "integer", "minimum": 0, "maximum": 10000 }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "type": {
+            "enum": ["summary", "capture", "review", "search", "run-status", "app-link", "resource-link"]
+          },
+          "capability": { "$ref": "#/$defs/qualified_id" },
+          "operation_id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{1,127}$" },
+          "risk_level": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+          "intent_prefixes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/qualified_id" }
+          },
+          "display": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "metric_pointer": { "$ref": "#/$defs/json_pointer" },
+              "detail_pointer": { "$ref": "#/$defs/json_pointer" },
+              "collection_pointer": { "$ref": "#/$defs/json_pointer" },
+              "unit": { "type": "string", "maxLength": 24 }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "type": { "enum": ["summary", "search", "run-status"] } } },
+            "then": { "required": ["capability", "operation_id"] }
+          },
+          {
+            "if": { "properties": { "type": { "const": "capture" } } },
+            "then": { "required": ["capability", "operation_id", "risk_level", "intent_prefixes"] }
+          },
+          {
+            "if": { "properties": { "type": { "const": "review" } } },
+            "then": { "required": ["capability", "risk_level", "intent_prefixes"] }
+          }
+        ]
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "mode", "list_operation_id", "create_operation_id", "commit_operation_id", "reject_operation_id"],
+      "properties": {
+        "protocol": { "const": "shadow.review.v1" },
+        "mode": { "enum": ["commit", "create-only"] },
+        "list_operation_id": { "$ref": "#/$defs/operation_id" },
+        "create_operation_id": { "$ref": "#/$defs/operation_id" },
+        "commit_operation_id": { "$ref": "#/$defs/operation_id" },
+        "reject_operation_id": { "$ref": "#/$defs/operation_id" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "qualified_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][A-Za-z0-9-]*)+$" },
+    "operation_id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{1,127}$" },
+    "json_pointer": { "type": "string", "pattern": "^(?:/(?:[^~/]|~[01])*)*$" }
+  }
+}

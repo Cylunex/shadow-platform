@@ -61,7 +61,7 @@ apps:
   travel:
     title: Shadow Travel
     owner: example-owner
-    lifecycle: experimental
+    lifecycle: production
     kind: web
     canonical_url: https://example.com/travel/
     aliases:
@@ -86,7 +86,21 @@ apps:
     health_path: /healthz
     media: true
     llm_models: []
-    agent_audience: false
+    agent_audience: true
+
+  archive:
+    title: Shadow Archive
+    owner: example-owner
+    lifecycle: production
+    kind: web
+    canonical_url: https://archive.example.com/
+    auth:
+      mode: oidc
+      groups: [archive-users]
+    health_path: /healthz
+    media: true
+    llm_models: [chat-default, vision-default]
+    agent_audience: true
 
   notifications:
     title: Shadow Notifications

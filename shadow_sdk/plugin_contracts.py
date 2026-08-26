@@ -247,6 +247,14 @@ def validate_plugin(plugin_root: Path, platform_root: Path) -> ValidatedPlugin:
     for name, relative in definition["spec"]["descriptors"].items():
         descriptor_paths[name] = resolve_inside(root, relative, label=f"descriptor {name}")
 
+    if "surfaces" in descriptor_paths:
+        surfaces = load_document(descriptor_paths["surfaces"])
+        validate_document(
+            surfaces,
+            contract_schema_path(platform_root, "shadow-surfaces.schema.json"),
+            label="runtime surfaces",
+        )
+
     manifest = load_document(descriptor_paths["agent"])
     validate_document(
         manifest,

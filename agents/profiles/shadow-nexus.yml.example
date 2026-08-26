@@ -17,6 +17,20 @@ plugins:
       - ledger.summary.read
       - ledger.records.read
       - ledger.budgets.read
+  - plugin_id: shadow-travel
+    instance_id: travel-production
+    capabilities:
+      - travel.maps.read
+  - plugin_id: shadow-archive
+    instance_id: archive-production
+    capabilities:
+      - archive.records.search
+      - archive.records.summarize
+      - archive.provenance.read
+  - plugin_id: shadow-garden
+    instance_id: garden-production
+    capabilities:
+      - garden.summary.read
   - plugin_id: shadow-daily-overview
     instance_id: daily-overview-production
     capabilities:

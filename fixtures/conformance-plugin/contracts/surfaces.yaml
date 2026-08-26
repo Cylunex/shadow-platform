@@ -1,0 +1,23 @@
+version: 1
+presentation:
+  short_id: conformance
+  title: Conformance
+  caption: Runtime projection contract fixture
+  icon: conformance
+  color: "#64748B"
+  order: 10
+surfaces:
+  - id: summary
+    type: summary
+    capability: conformance.records.read
+    operation_id: get_record
+    display:
+      detail_pointer: /summary
+  - id: capture
+    type: capture
+    capability: conformance.drafts.create
+    operation_id: create_draft
+    risk_level: L1
+    intent_prefixes: [conformance.draft]
+  - id: app
+    type: app-link

@@ -6,7 +6,7 @@
 有限能力。Platform 只校验、注册和编译合同；DSH 使用领域专属凭据直接访问项目 API，不经过
 Platform 转发业务流量。
 
-首批顺序为 Travel、Archive、Health、Ledger。Verse 与 Wingman 不在当前范围。
+首批为 Health、Ledger、Travel、Archive 和 Garden。Foliant、Verse 与 Wingman 不在当前范围。
 
 ## 2. 项目目录
 
@@ -29,7 +29,8 @@ shadow-<domain>/
     ├── resources.yaml
     ├── captures.yaml
     ├── confirmations.yaml
-    └── permissions.yaml
+    ├── permissions.yaml
+    └── surfaces.yaml
 ```
 
 MCP 项目另提供静态 `mcp-tools.json`；Composition Plugin 则提供
@@ -46,6 +47,12 @@ MCP 项目另提供静态 `mcp-tools.json`；Composition Plugin 则提供
 3. 用 OpenAPI operation 描述确定性 HTTP 输入输出；模型不能直接拼内部数据库请求。
 4. 再编写 Skill，说明何时调用、调用顺序、失败降级和事实边界。
 5. 最后配置 Profile，只选择当前场景需要的插件实例与能力。
+
+需要出现在 Nexus 的项目必须声明 `surfaces.yaml`。标准审核统一使用 `shadow.review.v1`（公共
+Envelope 见 `contracts/shadow-review.schema.json`），至少提供
+幂等创建、待审核列表、确认和拒绝四个操作；Capture-only 项目可以声明 `create-only`。领域项目
+拥有草稿状态和最终写入，Nexus 只缓存投影、引用、Revision 和 Receipt。App 通道则只由 Deployment
+与 App Catalog 生成，不因一个插件拥有 Agent 能力而自动出现移动入口。
 
 `hidden` 工具不会进入 DSH；`on-demand` 工具只在对应 Skill 成功载入后进入当前 Agent 的可见
 工具集合，并能从 Session 历史恢复。它仍只是模型可见性控制，不能替代 scope、资源授权或

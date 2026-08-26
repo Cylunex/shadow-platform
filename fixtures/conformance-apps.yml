@@ -1,0 +1,15 @@
+version: 1
+apps:
+  conformance:
+    title: Shadow Conformance
+    owner: example-owner
+    lifecycle: production
+    kind: web
+    canonical_url: https://conformance.example.com/
+    aliases:
+      - https://nas.example.com/conformance/
+    auth: {mode: oidc, groups: [shadow-users]}
+    health_path: /healthz
+    media: false
+    llm_models: []
+    agent_audience: true

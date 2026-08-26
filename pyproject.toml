@@ -37,6 +37,8 @@ shadow-notify-web = "notification_service.app:main"
 shadow-notify-worker = "notification_service.worker:main"
 shadow-plugin-validate = "scripts.validate_shadow_plugin:main"
 shadow-dsh-build = "scripts.build_dsh_bundle:main"
+shadow-profile-build = "scripts.build_shadow_profile:main"
+shadow-profile-activate = "scripts.activate_shadow_profile:main"
 shadow-platform-doctor = "scripts.platform_doctor:main"
 
 [tool.hatch.build.targets.wheel]

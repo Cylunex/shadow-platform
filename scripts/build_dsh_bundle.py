@@ -1070,6 +1070,7 @@ def build_bundle(
         "agent-profile.schema.json",
         "shadow-plugin-instance.schema.json",
         "shadow-plugin.schema.json",
+        "shadow-surfaces.schema.json",
         "shadow-tool-result.schema.json",
         "confirmation-receipt.schema.json",
         "mcp-tool-catalog.schema.json",

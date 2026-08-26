@@ -1,0 +1,70 @@
+version: 1
+id: shadow-production
+identity_issuer: https://identity.example.com/
+products:
+  shadow-health:
+    short_id: health
+    plugin_id: shadow-health
+    instance_id: health-production
+    app_id: health
+    module_id: health
+    channels: [dsh, nexus, app]
+    app: {enabled: true, capabilities: [web, health.scale, health.samsung, notification]}
+  shadow-ledger:
+    short_id: ledger
+    plugin_id: shadow-ledger
+    instance_id: ledger-production
+    app_id: ledger
+    module_id: ledger
+    channels: [dsh, nexus, app]
+    app: {enabled: true, capabilities: [web, finance, media]}
+  # 保留既有股票移动入口；本轮不把 Foliant 接入 DSH 或 Nexus。
+  shadow-foliant:
+    short_id: foliant
+    app_id: stock
+    module_id: stock
+    legacy_aliases: [shadow-stock]
+    channels: [app]
+    presentation:
+      title: Foliant
+      caption: 选股、持仓与市场研究
+      icon: stock
+      color: "#F59E0B"
+      order: 25
+    app: {enabled: true, capabilities: [web]}
+  shadow-travel:
+    short_id: travel
+    plugin_id: shadow-travel
+    instance_id: travel-production
+    app_id: travel
+    module_id: travel
+    channels: [dsh, nexus, app]
+    app: {enabled: true, capabilities: [web, map, media]}
+  shadow-archive:
+    short_id: archive
+    plugin_id: shadow-archive
+    instance_id: archive-production
+    app_id: archive
+    module_id: archive
+    channels: [dsh, nexus, app]
+    app: {enabled: true, capabilities: [web, media]}
+  shadow-garden:
+    short_id: garden
+    plugin_id: shadow-garden
+    instance_id: garden-production
+    app_id: garden
+    module_id: garden
+    channels: [dsh, nexus, app]
+    app: {enabled: true, capabilities: [web, media]}
+  shadow-notifications:
+    short_id: notifications
+    app_id: notifications
+    module_id: notifications
+    channels: [app]
+    presentation:
+      title: Notifications
+      caption: 通知、收件箱与跨渠道送达
+      icon: platform
+      color: "#F59E0B"
+      order: 60
+    app: {enabled: false, capabilities: [web]}

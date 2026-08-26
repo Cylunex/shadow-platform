@@ -1,0 +1,14 @@
+version: 1
+id: shadow-conformance-test
+identity_issuer: https://identity.example.com/
+products:
+  shadow-conformance:
+    short_id: conformance
+    plugin_id: shadow-conformance
+    instance_id: conformance-test
+    app_id: conformance
+    module_id: conformance
+    channels: [dsh, nexus, app]
+    app:
+      enabled: true
+      capabilities: [web]

@@ -35,6 +35,10 @@ Builder 会复制每个 Skill 所在目录，而不只嵌入 `SKILL.md`。Skill 
 
 ## 2. 构建
 
+`build_dsh_bundle.py` 仍可用于单独验证 DSH Profile；正式 Shadow 部署应优先使用
+`shadow-profile-build`，由同一 Deployment 同时生成 DSH、Nexus、App 投影和不可变 Deployment
+Lock。完整命令、校验和原子回滚见 [统一 Profile 编译](profile-compiler.md)。
+
 测试 fixture 的构建命令：
 
 ```bash

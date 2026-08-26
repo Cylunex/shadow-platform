@@ -12,6 +12,7 @@ def test_published_catalog_and_cross_references_are_valid():
     results = inspect_platform(root)
 
     assert set(catalog) == {
+        "archive",
         "foliant",
         "garden",
         "health",

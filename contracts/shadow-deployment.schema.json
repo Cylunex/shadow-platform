@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-deployment-v1.json",
+  "title": "Shadow Deployment Model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "id", "identity_issuer", "products"],
+  "properties": {
+    "version": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "identity_issuer": { "$ref": "#/$defs/https_url" },
+    "products": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^shadow-[a-z][a-z0-9-]{1,56}$" },
+      "additionalProperties": { "$ref": "#/$defs/product" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "https_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["short_id", "channels"],
+      "properties": {
+        "short_id": { "$ref": "#/$defs/id" },
+        "plugin_id": { "$ref": "#/$defs/id" },
+        "instance_id": { "$ref": "#/$defs/id" },
+        "app_id": { "$ref": "#/$defs/id" },
+        "module_id": { "$ref": "#/$defs/id" },
+        "legacy_aliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "presentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "caption", "icon", "color", "order"],
+          "properties": {
+            "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+            "caption": { "type": "string", "minLength": 1, "maxLength": 160 },
+            "icon": { "$ref": "#/$defs/id" },
+            "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "order": { "type": "integer", "minimum": 0, "maximum": 10000 }
+          }
+        },
+        "channels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["dsh", "nexus", "app"] }
+        },
+        "app": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "capabilities"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "capabilities": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "channels": { "contains": { "const": "app" } } } },
+          "then": { "required": ["app_id", "module_id", "app"] }
+        },
+        {
+          "if": { "properties": { "channels": { "contains": { "enum": ["dsh", "nexus"] } } } },
+          "then": { "required": ["plugin_id", "instance_id"] }
+        }
+      ]
+    }
+  }
+}

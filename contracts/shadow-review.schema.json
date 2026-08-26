@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-review-v1.json",
+  "title": "Shadow Review Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol", "review_id", "reference", "revision", "domain", "intent",
+    "summary", "fields", "risk_level", "state", "created_at", "source_refs",
+    "trace_id", "receipt", "replayed"
+  ],
+  "properties": {
+    "protocol": { "const": "shadow.review.v1" },
+    "review_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "reference": { "type": "string", "pattern": "^shadow://" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "domain": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "intent": { "type": "string", "pattern": "^[a-z][A-Za-z0-9.-]{2,120}$" },
+    "summary": { "type": "string", "maxLength": 1000 },
+    "fields": { "type": "object", "additionalProperties": true },
+    "risk_level": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+    "state": { "enum": ["pending", "committed", "rejected"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "source_refs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "maxLength": 2048 }
+    },
+    "trace_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "receipt": {
+      "anyOf": [
+        { "type": "string", "minLength": 1, "maxLength": 4096 },
+        { "type": "null" }
+      ]
+    },
+    "replayed": { "type": "boolean" }
+  }
+}

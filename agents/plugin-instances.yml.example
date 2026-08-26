@@ -2,7 +2,7 @@ version: 1
 instances:
   travel-production:
     plugin_id: shadow-travel
-    plugin_version: 1.0.0
+    plugin_version: 0.1.0
     environment: production
     base_url_env: SHADOW_TRAVEL_BASE_URL
     credential_env: SHADOW_TRAVEL_AGENT_TOKEN
@@ -10,7 +10,7 @@ instances:
     enabled: true
   archive-production:
     plugin_id: shadow-archive
-    plugin_version: 1.0.0
+    plugin_version: 0.1.0
     environment: production
     base_url_env: SHADOW_ARCHIVE_BASE_URL
     credential_env: SHADOW_ARCHIVE_AGENT_TOKEN
@@ -23,6 +23,8 @@ instances:
     base_url_env: SHADOW_HEALTH_BASE_URL
     credential_env: SHADOW_HEALTH_AGENT_TOKEN
     health_path: /healthz
+    context_env:
+      profile_id: SHADOW_HEALTH_PROFILE_ID
     enabled: true
   ledger-production:
     plugin_id: shadow-ledger
@@ -30,6 +32,14 @@ instances:
     environment: production
     base_url_env: SHADOW_LEDGER_BASE_URL
     credential_env: SHADOW_LEDGER_AGENT_TOKEN
+    health_path: /healthz
+    enabled: true
+  garden-production:
+    plugin_id: shadow-garden
+    plugin_version: 0.1.0
+    environment: production
+    base_url_env: SHADOW_GARDEN_BASE_URL
+    credential_env: SHADOW_GARDEN_AGENT_TOKEN
     health_path: /healthz
     enabled: true
   daily-overview-production:

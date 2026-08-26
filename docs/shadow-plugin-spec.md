@@ -38,6 +38,7 @@ spec:
     agent: agent/manifest.yaml
     events: contracts/events/index.yaml
     resources: contracts/resources/index.yaml
+    surfaces: contracts/surfaces.yaml
 ```
 
 真实服务地址和凭据不进入 Definition。部署侧 Instance Registry 只登记环境变量名：
@@ -155,6 +156,6 @@ Profile、DSH_HOME 和凭据边界，不能注册正式领域能力 ID。
 
 ## 10. 当前范围
 
-Platform 已完成协议、校验、HTTP/MCP/Composition Builder、按需 Skill 工具限制、L3/L4 回执和
-conformance fixture。领域首批为 Travel、Archive、Health、Ledger；Garden 和 Foliant 在后续
-正常改造时接入。Verse、Wingman 和 Chronicle 不在本轮范围。
+Platform 已完成协议、校验、HTTP/MCP/Composition Builder、按需 Skill 工具限制、L3/L4 回执、
+Surface 合同，以及面向 DSH、Nexus、App 的统一 Profile Compiler。领域首批为 Health、Ledger、
+Travel、Archive 和 Garden；Foliant、Verse 与 Wingman 不在本轮范围。

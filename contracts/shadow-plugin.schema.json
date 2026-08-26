@@ -52,7 +52,8 @@
             "resources": { "$ref": "#/$defs/relative_path" },
             "captures": { "$ref": "#/$defs/relative_path" },
             "confirmations": { "$ref": "#/$defs/relative_path" },
-            "permissions": { "$ref": "#/$defs/relative_path" }
+            "permissions": { "$ref": "#/$defs/relative_path" },
+            "surfaces": { "$ref": "#/$defs/relative_path" }
           }
         }
       }

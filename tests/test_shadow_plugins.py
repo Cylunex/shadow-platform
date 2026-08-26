@@ -411,7 +411,11 @@ def test_shadow_nexus_model_profile_is_read_only() -> None:
     }
 
     assert selected
-    assert all(capability.endswith(".read") for capability in selected)
+    assert not any(
+        capability.rsplit(".", 1)[-1]
+        in {"create", "draft", "write", "commit", "publish", "delete"}
+        for capability in selected
+    )
     assert "health.records.draft" not in selected
     assert "ledger.records.draft" not in selected
 
