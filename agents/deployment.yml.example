@@ -2,6 +2,18 @@ version: 1
 id: shadow-production
 identity_issuer: https://identity.example.com/
 products:
+  shadow-nexus:
+    short_id: nexus
+    app_id: nexus
+    module_id: nexus
+    channels: [app]
+    presentation:
+      title: Nexus
+      caption: 统一对话、采集、搜索与审核工作台
+      icon: app
+      color: "#64748B"
+      order: 0
+    app: {enabled: true, capabilities: [web, media]}
   shadow-health:
     short_id: health
     plugin_id: shadow-health
