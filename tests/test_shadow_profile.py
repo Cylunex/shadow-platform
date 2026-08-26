@@ -51,6 +51,10 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
     assert nexus["domains"][0]["connection"]["base_url_env"] == (
         "SHADOW_CONFORMANCE_BASE_URL"
     )
+    assert nexus["domains"][0]["app"] == {
+        "canonical_url": "https://conformance.example.com/",
+        "aliases": ["https://nas.example.com/conformance/"],
+    }
     assert app["schemaVersion"] == 4
     assert app["modules"][0]["product_id"] == "shadow-conformance"
     assert app["modules"][0]["canonical_url"] == "https://conformance.example.com/"
@@ -123,3 +127,33 @@ def test_standard_review_envelope_contract() -> None:
         contract_schema_path(ROOT, "shadow-review.schema.json"),
         label="review fixture",
     )
+
+
+def test_search_surface_requires_generic_item_projection() -> None:
+    document = {
+        "version": 1,
+        "presentation": {
+            "short_id": "archive",
+            "title": "Archive",
+            "caption": "Personal archive",
+            "icon": "archive",
+            "color": "#112233",
+            "order": 10,
+        },
+        "surfaces": [
+            {
+                "id": "search",
+                "type": "search",
+                "capability": "archive.records.search",
+                "operation_id": "search_archive",
+                "display": {"collection_pointer": "/items"},
+            }
+        ],
+    }
+
+    with pytest.raises(PluginContractError, match="item_title_pointer"):
+        validate_document(
+            document,
+            contract_schema_path(ROOT, "shadow-surfaces.schema.json"),
+            label="search surface fixture",
+        )

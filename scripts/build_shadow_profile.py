@@ -191,6 +191,7 @@ def _nexus_projection(
     instance: dict[str, Any],
     surfaces: dict[str, Any],
     presentation: dict[str, Any],
+    app_descriptor: AppDescriptor | None,
 ) -> dict[str, Any]:
     operations = _operation_catalog(plugin)
     projected_surfaces: list[dict[str, Any]] = []
@@ -201,6 +202,11 @@ def _nexus_projection(
             projected["operation"] = operations[operation_id]
         projected_surfaces.append(projected)
     review = surfaces.get("review")
+    has_app_link = any(surface["type"] == "app-link" for surface in surfaces["surfaces"])
+    if has_app_link and "app" not in product["channels"]:
+        raise PluginContractError(f"{product_id}: app-link surface requires the App channel")
+    if has_app_link and (app_descriptor is None or app_descriptor.canonical_url is None):
+        raise PluginContractError(f"{product_id}: app-link surface requires an App Catalog URL")
     projected_review = None
     if review is not None:
         projected_review = {
@@ -227,6 +233,12 @@ def _nexus_projection(
         "surfaces": projected_surfaces,
         "review": projected_review,
         "app_id": product.get("app_id"),
+        "app": None
+        if not has_app_link
+        else {
+            "canonical_url": app_descriptor.canonical_url,
+            "aliases": list(app_descriptor.aliases),
+        },
     }
 
 
@@ -308,6 +320,7 @@ def build_shadow_profile(
         plugin = plugins.get(product.get("plugin_id"))
         surfaces = _surface_document(plugin, platform_root) if plugin is not None else None
         presentation = _presentation(product_id, product, surfaces)
+        app_descriptor = catalog.get(product.get("app_id"))
         instance = None
         if channels & {"dsh", "nexus"}:
             if plugin is None:
@@ -337,10 +350,11 @@ def build_shadow_profile(
                     instance=instance,
                     surfaces=surfaces,
                     presentation=presentation,
+                    app_descriptor=app_descriptor,
                 )
             )
         if "app" in channels:
-            descriptor = catalog.get(product["app_id"])
+            descriptor = app_descriptor
             if descriptor is None:
                 raise PluginContractError(f"{product_id}: App Catalog entry is missing")
             app_modules.append(

@@ -42,7 +42,7 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 ```
 
 - DSH 投影包含 Tools、Skills、Policy 和运行时映射；
-- Nexus 投影包含动态领域、连接变量名、Surface 和标准 Review 操作；
+- Nexus 投影包含动态领域、连接变量名、Surface、标准 Review 操作和 Catalog 提供的应用入口；
 - App 投影包含可信 Web 入口、别名、图标、顺序和原生能力边界；
 - Lock 记录所有输入摘要、Canonical Identity Map、三个输出摘要和 DSH Bundle 树摘要。
 

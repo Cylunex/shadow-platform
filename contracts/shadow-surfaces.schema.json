@@ -47,6 +47,9 @@
               "metric_pointer": { "$ref": "#/$defs/json_pointer" },
               "detail_pointer": { "$ref": "#/$defs/json_pointer" },
               "collection_pointer": { "$ref": "#/$defs/json_pointer" },
+              "item_title_pointer": { "$ref": "#/$defs/json_pointer" },
+              "item_detail_pointer": { "$ref": "#/$defs/json_pointer" },
+              "item_reference_pointer": { "$ref": "#/$defs/json_pointer" },
               "unit": { "type": "string", "maxLength": 24 }
             }
           }
@@ -59,6 +62,17 @@
           {
             "if": { "properties": { "type": { "const": "capture" } } },
             "then": { "required": ["capability", "operation_id", "risk_level", "intent_prefixes"] }
+          },
+          {
+            "if": { "properties": { "type": { "const": "search" } } },
+            "then": {
+              "required": ["display"],
+              "properties": {
+                "display": {
+                  "required": ["collection_pointer", "item_title_pointer"]
+                }
+              }
+            }
           },
           {
             "if": { "properties": { "type": { "const": "review" } } },
