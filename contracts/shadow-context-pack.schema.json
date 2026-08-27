@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-context-v1.json",
+  "title": "Shadow Context Pack v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol", "context_id", "session_id", "source_domain", "resource_refs",
+    "asset_refs", "capability_grants", "created_at", "expires_at"
+  ],
+  "properties": {
+    "protocol": { "const": "shadow.context.v1" },
+    "context_id": { "$ref": "#/$defs/id" },
+    "session_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "source_domain": {
+      "anyOf": [
+        { "$ref": "#/$defs/domain" },
+        { "type": "null" }
+      ]
+    },
+    "resource_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/shadow_ref" }
+    },
+    "time_range": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "string", "format": "date-time" },
+            "end": { "type": "string", "format": "date-time" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "goal": {
+      "anyOf": [
+        { "type": "string", "minLength": 1, "maxLength": 500 },
+        { "type": "null" }
+      ]
+    },
+    "asset_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/shadow_ref" }
+    },
+    "capability_grants": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/capability" }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^ctx_[A-Za-z0-9_-]{8,128}$" },
+    "domain": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "capability": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][A-Za-z0-9-]*)+$" },
+    "shadow_ref": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 }
+  }
+}

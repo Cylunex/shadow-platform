@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-suggestion-v1.json",
+  "title": "Shadow Suggestion v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol", "suggestion_id", "domain", "rule_id", "dedupe_key", "title",
+    "summary", "reason", "evidence_refs", "importance", "allowed_actions",
+    "created_at", "valid_until", "data_freshness"
+  ],
+  "properties": {
+    "protocol": { "const": "shadow.suggestion.v1" },
+    "suggestion_id": { "type": "string", "pattern": "^sug_[A-Za-z0-9_-]{8,128}$" },
+    "domain": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "rule_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][A-Za-z0-9-]*)+$" },
+    "dedupe_key": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "evidence_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 }
+    },
+    "importance": { "enum": ["low", "normal", "high", "urgent"] },
+    "confidence": {
+      "anyOf": [
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "allowed_actions": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": { "enum": ["ignore", "snooze", "mute", "create_draft", "view_evidence"] }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "valid_until": { "type": "string", "format": "date-time" },
+    "data_freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observed_at", "missing_ratio"],
+      "properties": {
+        "observed_at": { "type": "string", "format": "date-time" },
+        "missing_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

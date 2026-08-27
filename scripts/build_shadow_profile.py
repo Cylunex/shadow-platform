@@ -290,6 +290,9 @@ def build_shadow_profile(
         "shadow-deployment.schema.json",
         "shadow-surfaces.schema.json",
         "shadow-review.schema.json",
+        "shadow-context-pack.schema.json",
+        "shadow-capture-envelope.schema.json",
+        "shadow-suggestion.schema.json",
         "shadow-plugin.schema.json",
         "shadow-plugin-instance.schema.json",
         "agent-profile.schema.json",
@@ -421,6 +424,44 @@ def build_shadow_profile(
             "modules": sorted(app_modules, key=lambda item: item["order"]),
         },
     )
+    report_products = [
+        {
+            **identity,
+            "status": "enabled",
+            "projections": {
+                "dsh": "dsh" in identity["channels"],
+                "nexus": "nexus" in identity["channels"],
+                "app": "app" in identity["channels"],
+            },
+            "reason": "selected by deployment",
+        }
+        for identity in identities
+    ]
+    _write_json(
+        staging / "shadow-deployment-report.json",
+        {
+            "version": 1,
+            "protocol": "shadow.deployment-report.v1",
+            "deployment_id": deployment["id"],
+            "build_id": build_id,
+            "profile_id": profile["id"],
+            "summary": {
+                "products": len(report_products),
+                "dsh_plugins": sum("dsh" in item["channels"] for item in identities),
+                "nexus_domains": len(nexus_domains),
+                "app_modules": len(app_modules),
+                "degraded": 0,
+                "filtered": 0,
+                "incompatible": 0,
+            },
+            "products": report_products,
+            "warnings": [],
+            "notes": [
+                "Secrets are resolved only by runtime environment variables.",
+                "Build compatibility does not replace live deployment checks.",
+            ],
+        },
+    )
     lock = {
         "version": 1,
         "deployment_id": deployment["id"],
@@ -442,6 +483,7 @@ def build_shadow_profile(
                 "shadow-dsh-runtime.json",
                 "shadow-nexus-runtime.json",
                 "shadow-app-runtime.json",
+                "shadow-deployment-report.json",
             )
         ],
     }

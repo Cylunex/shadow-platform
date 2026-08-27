@@ -34,6 +34,7 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
     dsh = json.loads((target / "shadow-dsh-runtime.json").read_text("utf-8"))
     nexus = json.loads((target / "shadow-nexus-runtime.json").read_text("utf-8"))
     app = json.loads((target / "shadow-app-runtime.json").read_text("utf-8"))
+    report = json.loads((target / "shadow-deployment-report.json").read_text("utf-8"))
     lock = json.loads((target / "shadow-deployment.lock").read_text("utf-8"))
 
     assert dsh["profile_id"] == "shadow-conformance"
@@ -59,12 +60,24 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
     assert app["modules"][0]["product_id"] == "shadow-conformance"
     assert app["modules"][0]["canonical_url"] == "https://conformance.example.com/"
     assert lock["build_id"] == nexus["build_id"] == app["platform"]["buildId"]
+    assert report["build_id"] == lock["build_id"]
+    assert report["summary"] == {
+        "products": 1,
+        "dsh_plugins": 1,
+        "nexus_domains": 1,
+        "app_modules": 1,
+        "degraded": 0,
+        "filtered": 0,
+        "incompatible": 0,
+    }
+    assert report["products"][0]["status"] == "enabled"
     assert (target / lock["dsh_bundle"]["path"] / "package.json").is_file()
     assert target.name == lock["build_id"]
     assert {item["path"] for item in lock["outputs"]} == {
         "shadow-dsh-runtime.json",
         "shadow-nexus-runtime.json",
         "shadow-app-runtime.json",
+        "shadow-deployment-report.json",
     }
     assert verify_release(target)["build_id"] == lock["build_id"]
 
@@ -119,6 +132,9 @@ def test_standard_review_envelope_contract() -> None:
             "risk_level": "L2",
             "state": "pending",
             "created_at": "2026-08-26T00:00:00Z",
+            "field_schema_version": 2,
+            "field_schema_digest": "a" * 64,
+            "expires_at": "2026-08-27T00:00:00Z",
             "source_refs": [],
             "trace_id": "trace-example",
             "receipt": None,
@@ -126,6 +142,71 @@ def test_standard_review_envelope_contract() -> None:
         },
         contract_schema_path(ROOT, "shadow-review.schema.json"),
         label="review fixture",
+    )
+
+
+def test_context_capture_and_suggestion_contracts() -> None:
+    validate_document(
+        {
+            "protocol": "shadow.context.v1",
+            "context_id": "ctx_example123",
+            "session_id": "session-a",
+            "source_domain": "health",
+            "resource_refs": ["shadow://health/weight-series/latest"],
+            "time_range": {
+                "start": "2026-08-01T00:00:00Z",
+                "end": "2026-08-27T00:00:00Z",
+            },
+            "goal": "解释最近体重变化",
+            "asset_refs": [],
+            "capability_grants": ["health.summary.read"],
+            "created_at": "2026-08-27T00:00:00Z",
+            "expires_at": "2026-08-28T00:00:00Z",
+        },
+        contract_schema_path(ROOT, "shadow-context-pack.schema.json"),
+        label="context fixture",
+    )
+    validate_document(
+        {
+            "protocol": "shadow.capture.v1",
+            "capture_id": "cap_example123",
+            "source_type": "android.share.text",
+            "occurred_at": "2026-08-27T00:00:00Z",
+            "received_at": "2026-08-27T00:00:01Z",
+            "text": "一段准备分类的分享文本",
+            "content_refs": [],
+            "source_app": "com.example.browser",
+            "content_hash": "b" * 64,
+            "privacy_class": "personal",
+            "candidate_domains": [],
+            "trace_id": "trace-capture",
+        },
+        contract_schema_path(ROOT, "shadow-capture-envelope.schema.json"),
+        label="capture fixture",
+    )
+    validate_document(
+        {
+            "protocol": "shadow.suggestion.v1",
+            "suggestion_id": "sug_example123",
+            "domain": "health",
+            "rule_id": "health.weekly-review",
+            "dedupe_key": "health:weekly:2026-W35",
+            "title": "本周健康回顾",
+            "summary": "体重记录完整，训练记录偏少。",
+            "reason": "基于最近七天已确认数据。",
+            "evidence_refs": ["shadow://health/weekly-reviews/2026-W35"],
+            "importance": "normal",
+            "confidence": 0.8,
+            "allowed_actions": ["ignore", "snooze", "mute", "view_evidence"],
+            "created_at": "2026-08-27T00:00:00Z",
+            "valid_until": "2026-09-03T00:00:00Z",
+            "data_freshness": {
+                "observed_at": "2026-08-26T23:59:59Z",
+                "missing_ratio": 0.1,
+            },
+        },
+        contract_schema_path(ROOT, "shadow-suggestion.schema.json"),
+        label="suggestion fixture",
     )
 
 

@@ -38,6 +38,7 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 ├── shadow-dsh-runtime.json
 ├── shadow-nexus-runtime.json
 ├── shadow-app-runtime.json
+├── shadow-deployment-report.json
 └── shadow-deployment.lock
 ```
 
@@ -45,6 +46,8 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 - Nexus 投影包含动态领域、连接变量名、Surface、标准 Review 操作和 Catalog 提供的应用入口；
 - App 投影包含可信 Web 入口、别名、图标、顺序和原生能力边界；
 - Lock 记录所有输入摘要、Canonical Identity Map、三个输出摘要和 DSH Bundle 树摘要。
+- Deployment Report 汇总部署/构建/Profile 身份、通道覆盖、产物摘要和非秘密警告，供运维核对；
+  报告只记录环境变量名，不记录地址、Token 或凭据值。
 
 构建目录以 `build-id` 不可变保存。相同输入复用同一 Release；不同输入创建新 Release，不覆盖
 旧版本，因此回滚不需要重新构建。
@@ -72,6 +75,21 @@ shadow-profile-activate \
 不传 `--current-link` 时只做完整性校验。激活前会校验 Lock、三个投影和 DSH Bundle；通过后用
 同一文件系统内的符号链接原子切换 `current`。回滚就是对上一 Release 重复执行激活命令。
 运行进程应从 `current` 读取，但启动日志必须记录解析后的 `deployment_id` 与 `build_id`。
+
+激活或切流前可运行在线 Doctor：
+
+```bash
+shadow-deployment-doctor \
+  --release-dir /srv/shadow/releases/<deployment>/<build-id> \
+  --output /tmp/shadow-doctor.json
+```
+
+Doctor 先验证不可变 Release，再按 Nexus 投影检查每个领域所需环境变量和 `health_path`。输出仅
+包含缺失变量名、HTTP 状态和稳定原因，不回显 URL、Bearer 或响应正文；任何失败默认返回非零。
+
+Platform 同时发布 `shadow.context.v1`、`shadow.capture.v1` 与 `shadow.suggestion.v1` JSON
+Schema。Context Pack 只保存稳定 `shadow://` 引用和短期授权；Capture Envelope 统一移动分享
+来源；Suggestion 强制携带理由、证据引用、有效期、数据缺失率和允许反馈动作。
 
 ## 一致性与降级
 

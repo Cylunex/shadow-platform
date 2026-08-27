@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shadow-platform"
-version = "0.7.1"
+version = "0.8.0"
 description = "Shared identity, asset, notification, LLM and agent foundations for Shadow applications"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -40,6 +40,7 @@ shadow-dsh-build = "scripts.build_dsh_bundle:main"
 shadow-profile-build = "scripts.build_shadow_profile:main"
 shadow-profile-activate = "scripts.activate_shadow_profile:main"
 shadow-platform-doctor = "scripts.platform_doctor:main"
+shadow-deployment-doctor = "scripts.deployment_doctor:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["media_service", "notification_service", "scripts", "shadow_sdk", "telemetry_service"]

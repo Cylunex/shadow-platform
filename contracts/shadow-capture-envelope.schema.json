@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-capture-v1.json",
+  "title": "Shadow Capture Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol", "capture_id", "source_type", "occurred_at", "received_at",
+    "content_refs", "privacy_class", "candidate_domains", "trace_id"
+  ],
+  "properties": {
+    "protocol": { "const": "shadow.capture.v1" },
+    "capture_id": { "type": "string", "pattern": "^cap_[A-Za-z0-9_-]{8,128}$" },
+    "source_type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$",
+      "maxLength": 128
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "received_at": { "type": "string", "format": "date-time" },
+    "text": {
+      "anyOf": [
+        { "type": "string", "maxLength": 20000 },
+        { "type": "null" }
+      ]
+    },
+    "content_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 }
+    },
+    "source_app": {
+      "anyOf": [
+        { "type": "string", "maxLength": 255 },
+        { "type": "null" }
+      ]
+    },
+    "content_hash": {
+      "anyOf": [
+        { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        { "type": "null" }
+      ]
+    },
+    "privacy_class": { "enum": ["public", "personal", "sensitive", "restricted"] },
+    "candidate_domains": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 16,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" }
+    },
+    "trace_id": { "type": "string", "minLength": 1, "maxLength": 256 }
+  },
+  "anyOf": [
+    { "properties": { "text": { "type": "string", "minLength": 1 } }, "required": ["text"] },
+    { "properties": { "content_refs": { "minItems": 1 } } }
+  ]
+}

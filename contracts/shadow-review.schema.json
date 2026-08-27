@@ -21,6 +21,14 @@
     "risk_level": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
     "state": { "enum": ["pending", "committed", "rejected"] },
     "created_at": { "type": "string", "format": "date-time" },
+    "field_schema_version": { "type": "integer", "minimum": 1 },
+    "field_schema_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "expires_at": {
+      "anyOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
     "source_refs": {
       "type": "array",
       "maxItems": 64,
