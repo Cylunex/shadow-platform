@@ -44,5 +44,6 @@ python -m venv .venv
 - [Shadow Plugin Specification](docs/shadow-plugin-spec.md)
 - [DeepSeek Harness 接入](docs/dsh-integration.md)
 - [统一 Profile 编译、校验与回滚](docs/profile-compiler.md)
+- [能力 Conformance、运行证据与恢复验证](docs/operations-conformance.md)
 - [领域项目插件化接入清单](docs/domain-plugin-onboarding.md)
 - [安全边界](docs/security.md)

@@ -11,6 +11,7 @@ from typing import Any
 
 from scripts.build_dsh_bundle import build_bundle
 from shadow_sdk.catalog import AppDescriptor, load_app_catalog
+from shadow_sdk.conformance import build_capability_status
 from shadow_sdk.plugin_contracts import (
     PluginContractError,
     ValidatedPlugin,
@@ -344,6 +345,10 @@ def build_shadow_profile(
         "shadow-portable-export.schema.json",
         "shadow-sync-envelope.schema.json",
         "shadow-space.schema.json",
+        "shadow-operation-context.schema.json",
+        "shadow-capability-status.schema.json",
+        "shadow-conformance-evidence.schema.json",
+        "shadow-restore-drill.schema.json",
         "shadow-plugin.schema.json",
         "shadow-plugin-instance.schema.json",
         "agent-profile.schema.json",
@@ -354,6 +359,12 @@ def build_shadow_profile(
         platform_root / "scripts" / "build_dsh_bundle.py"
     )
     named_inputs["compiler/shadow_sdk/catalog.py"] = platform_root / "shadow_sdk" / "catalog.py"
+    named_inputs["compiler/shadow_sdk/conformance.py"] = (
+        platform_root / "shadow_sdk" / "conformance.py"
+    )
+    named_inputs["compiler/shadow_sdk/observability.py"] = (
+        platform_root / "shadow_sdk" / "observability.py"
+    )
     named_inputs["compiler/shadow_sdk/plugin_contracts.py"] = (
         platform_root / "shadow_sdk" / "plugin_contracts.py"
     )
@@ -521,6 +532,17 @@ def build_shadow_profile(
             ],
         },
     )
+    capability_status = build_capability_status(
+        platform_root=platform_root,
+        deployment_id=deployment["id"],
+        build_id=build_id,
+        profile_id=profile["id"],
+        products=deployment["products"],
+        plugins=plugins,
+        profile=profile,
+        nexus_domains=nexus_domains,
+    )
+    _write_json(staging / "shadow-capability-status.json", capability_status)
     lock = {
         "version": 1,
         "deployment_id": deployment["id"],
@@ -543,6 +565,7 @@ def build_shadow_profile(
                 "shadow-nexus-runtime.json",
                 "shadow-app-runtime.json",
                 "shadow-deployment-report.json",
+                "shadow-capability-status.json",
             )
         ],
     }

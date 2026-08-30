@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-operation-context-v1.json",
+  "title": "Shadow Operation Correlation Context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "correlation_id", "trace_id", "request_id"],
+  "properties": {
+    "run_id": { "$ref": "#/$defs/id" },
+    "correlation_id": { "$ref": "#/$defs/id" },
+    "trace_id": { "$ref": "#/$defs/id" },
+    "request_id": { "$ref": "#/$defs/id" },
+    "causation_id": { "$ref": "#/$defs/id" },
+    "idempotency_key": { "$ref": "#/$defs/id" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    }
+  }
+}

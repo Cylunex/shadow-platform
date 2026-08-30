@@ -36,6 +36,9 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
     nexus = json.loads((target / "shadow-nexus-runtime.json").read_text("utf-8"))
     app = json.loads((target / "shadow-app-runtime.json").read_text("utf-8"))
     report = json.loads((target / "shadow-deployment-report.json").read_text("utf-8"))
+    capability_status = json.loads(
+        (target / "shadow-capability-status.json").read_text("utf-8")
+    )
     lock = json.loads((target / "shadow-deployment.lock").read_text("utf-8"))
 
     assert dsh["profile_id"] == "shadow-conformance"
@@ -103,6 +106,18 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
         "incompatible": 0,
     }
     assert report["products"][0]["status"] == "enabled"
+    assert capability_status["protocol"] == "shadow.capability-status.v1"
+    assert capability_status["summary"] == {
+        "capabilities": 7,
+        "selected": 7,
+        "contract": 7,
+        "client": 7,
+        "deployed": 0,
+        "observed": 0,
+        "restore_tested": 0,
+        "failed": 0,
+    }
+    assert {item["maturity"] for item in capability_status["capabilities"]} == {"client"}
     assert (target / lock["dsh_bundle"]["path"] / "package.json").is_file()
     assert target.name == lock["build_id"]
     assert {item["path"] for item in lock["outputs"]} == {
@@ -110,6 +125,7 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
         "shadow-nexus-runtime.json",
         "shadow-app-runtime.json",
         "shadow-deployment-report.json",
+        "shadow-capability-status.json",
     }
     assert verify_release(target)["build_id"] == lock["build_id"]
 

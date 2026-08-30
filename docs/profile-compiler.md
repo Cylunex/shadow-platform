@@ -39,15 +39,18 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 ├── shadow-nexus-runtime.json
 ├── shadow-app-runtime.json
 ├── shadow-deployment-report.json
+├── shadow-capability-status.json
 └── shadow-deployment.lock
 ```
 
 - DSH 投影包含 Tools、Skills、Policy 和运行时映射；
 - Nexus 投影包含动态领域、连接变量名、Surface、标准 Review 操作和 Catalog 提供的应用入口；
 - App 投影包含可信 Web 入口、默认首页模块、别名、图标、顺序和原生能力边界；
-- Lock 记录所有输入摘要、Canonical Identity Map、三个输出摘要和 DSH Bundle 树摘要。
+- Lock 记录所有输入摘要、Canonical Identity Map、全部输出摘要和 DSH Bundle 树摘要。
 - Deployment Report 汇总部署/构建/Profile 身份、通道覆盖、产物摘要和非秘密警告，供运维核对；
   报告只记录环境变量名，不记录地址、Token 或凭据值。
+- Capability Status 为每项插件能力分别记录 `contract`、`client`、`deployed`、`observed` 与
+  `restore-tested`，编译器只填写自己确实验证过的前两阶段，不把构建成功冒充线上可用。
 
 构建目录以 `build-id` 不可变保存。相同输入复用同一 Release；不同输入创建新 Release，不覆盖
 旧版本，因此回滚不需要重新构建。
@@ -72,7 +75,7 @@ shadow-profile-activate \
   --current-link /srv/shadow/runtime/current
 ```
 
-不传 `--current-link` 时只做完整性校验。激活前会校验 Lock、三个投影和 DSH Bundle；通过后用
+不传 `--current-link` 时只做完整性校验。激活前会校验 Lock、全部投影和 DSH Bundle；通过后用
 同一文件系统内的符号链接原子切换 `current`。回滚就是对上一 Release 重复执行激活命令。
 运行进程应从 `current` 读取，但启动日志必须记录解析后的 `deployment_id` 与 `build_id`。
 
@@ -81,11 +84,13 @@ shadow-profile-activate \
 ```bash
 shadow-deployment-doctor \
   --release-dir /srv/shadow/releases/<deployment>/<build-id> \
-  --output /tmp/shadow-doctor.json
+  --output /tmp/shadow-doctor.json \
+  --evidence-output /tmp/shadow-deployed-evidence.json
 ```
 
 Doctor 先验证不可变 Release，再按 Nexus 投影检查每个领域所需环境变量和 `health_path`。输出仅
 包含缺失变量名、HTTP 状态和稳定原因，不回显 URL、Bearer 或响应正文；任何失败默认返回非零。
+Doctor 可把配置完整性转换为 `deployed` 证据，但普通健康检查不会冒充能力级 `observed` 证据。
 
 Platform 同时发布 `shadow.context.v1`、`shadow.capture.v1` 与 `shadow.suggestion.v1` JSON
 Schema。Context Pack 只保存稳定 `shadow://` 引用和短期授权；Capture Envelope 统一移动分享

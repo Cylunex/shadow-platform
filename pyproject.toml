@@ -41,6 +41,8 @@ shadow-profile-build = "scripts.build_shadow_profile:main"
 shadow-profile-activate = "scripts.activate_shadow_profile:main"
 shadow-platform-doctor = "scripts.platform_doctor:main"
 shadow-deployment-doctor = "scripts.deployment_doctor:main"
+shadow-conformance-gate = "scripts.conformance_gate:main"
+shadow-restore-verify = "scripts.verify_restore:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["media_service", "notification_service", "scripts", "shadow_sdk", "telemetry_service"]

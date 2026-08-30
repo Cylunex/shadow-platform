@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-conformance-evidence-v1.json",
+  "title": "Shadow Cross-project Conformance Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "protocol", "evidence_id", "producer", "deployment_id", "build_id", "observed_at", "correlation", "records"],
+  "properties": {
+    "version": { "const": 1 },
+    "protocol": { "const": "shadow.conformance-evidence.v1" },
+    "evidence_id": { "$ref": "#/$defs/safe_id" },
+    "producer": {
+      "type": "object", "additionalProperties": false, "required": ["project_id", "component"],
+      "properties": {
+        "project_id": { "$ref": "#/$defs/id" },
+        "component": { "$ref": "#/$defs/id" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
+    "deployment_id": { "$ref": "#/$defs/id" },
+    "build_id": { "$ref": "#/$defs/sha256" },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "correlation": { "$ref": "#/$defs/correlation" },
+    "records": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/record" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "safe_id": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$" },
+    "correlation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "correlation_id", "trace_id", "request_id"],
+      "properties": {
+        "run_id": { "$ref": "#/$defs/safe_id" }, "correlation_id": { "$ref": "#/$defs/safe_id" },
+        "trace_id": { "$ref": "#/$defs/safe_id" }, "request_id": { "$ref": "#/$defs/safe_id" },
+        "causation_id": { "$ref": "#/$defs/safe_id" }, "idempotency_key": { "$ref": "#/$defs/safe_id" }
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false, "required": ["name", "category", "status"],
+      "properties": {
+        "name": { "$ref": "#/$defs/id" },
+        "category": { "enum": ["contract", "client", "deployment", "data", "health", "security"] },
+        "status": { "enum": ["passed", "failed"] },
+        "detail": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "record": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability_ref", "stage", "status", "detail"],
+      "properties": {
+        "capability_ref": { "type": "string", "pattern": "^shadow://capabilities/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+        "stage": { "enum": ["contract", "client", "deployed", "observed", "restore-tested"] },
+        "status": { "enum": ["passed", "failed"] },
+        "detail": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "checks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/check" } }
+      }
+    }
+  }
+}

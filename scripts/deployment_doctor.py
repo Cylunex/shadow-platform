@@ -11,6 +11,8 @@ from typing import Any
 import httpx
 
 from scripts.activate_shadow_profile import verify_release
+from shadow_sdk.conformance import apply_evidence
+from shadow_sdk.observability import OperationContext
 from shadow_sdk.plugin_contracts import PluginContractError
 
 
@@ -29,16 +31,27 @@ def inspect_deployment(
     *,
     environment: Mapping[str, str] | None = None,
     client: httpx.Client | None = None,
+    context: OperationContext | None = None,
 ) -> dict[str, Any]:
     """Verify one immutable release and probe every configured domain without exposing secrets."""
 
     release = release_dir.resolve()
     lock = verify_release(release)
     runtime = _read_json(release / "shadow-nexus-runtime.json")
+    capability_status = _read_json(release / "shadow-capability-status.json")
+    operation = context or OperationContext.create(
+        correlation_id=f"deployment-{lock['deployment_id']}"
+    )
+    observed_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     values = os.environ if environment is None else environment
     owns_client = client is None
     http = client or httpx.Client(timeout=5.0, follow_redirects=False)
     domains: list[dict[str, Any]] = []
+    evidence_records: list[dict[str, Any]] = []
+    capabilities_by_instance: dict[str, list[dict[str, Any]]] = {}
+    for capability in capability_status["capabilities"]:
+        if capability["selected"]:
+            capabilities_by_instance.setdefault(capability["instance_id"], []).append(capability)
     try:
         for domain in runtime.get("domains", []):
             domain_id = str(domain.get("id", "unknown"))
@@ -61,8 +74,35 @@ def inspect_deployment(
                 "missing_environment": sorted(str(item) for item in missing),
             }
             if missing or not isinstance(health_path, str) or not health_path:
+                evidence_records.extend(
+                    {
+                        "capability_ref": capability["capability_ref"],
+                        "stage": "deployed",
+                        "status": "failed",
+                        "detail": (
+                            "required runtime environment is missing"
+                            if missing
+                            else "health path is unavailable"
+                        ),
+                    }
+                    for capability in capabilities_by_instance.get(
+                        str(domain.get("instance_id")), []
+                    )
+                )
                 domains.append(result)
                 continue
+            instance_capabilities = capabilities_by_instance.get(
+                str(domain.get("instance_id")), []
+            )
+            evidence_records.extend(
+                {
+                    "capability_ref": capability["capability_ref"],
+                    "stage": "deployed",
+                    "status": "passed",
+                    "detail": "release and runtime configuration are present",
+                }
+                for capability in instance_capabilities
+            )
             base_url = values[str(base_env)].rstrip("/")
             path = health_path if health_path.startswith("/") else f"/{health_path}"
             try:
@@ -90,12 +130,34 @@ def inspect_deployment(
     ready = sum(item["status"] == "ready" for item in domains)
     degraded = sum(item["status"] == "degraded" for item in domains)
     failed = sum(item["status"] == "failed" for item in domains)
+    conformance_evidence = None
+    if evidence_records:
+        conformance_evidence = {
+            "version": 1,
+            "protocol": "shadow.conformance-evidence.v1",
+            "evidence_id": operation.run_id,
+            "producer": {
+                "project_id": lock["deployment_id"],
+                "component": "deployment-doctor",
+            },
+            "deployment_id": lock["deployment_id"],
+            "build_id": lock["build_id"],
+            "observed_at": observed_at,
+            "correlation": operation.as_dict(),
+            "records": evidence_records,
+        }
+        capability_status = apply_evidence(
+            capability_status,
+            conformance_evidence,
+            platform_root=Path(__file__).parents[1],
+        )
     return {
         "version": 1,
         "protocol": "shadow.deployment-doctor.v1",
         "deployment_id": lock["deployment_id"],
         "build_id": lock["build_id"],
-        "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "generated_at": observed_at,
+        "correlation": operation.as_dict(),
         "release_integrity": "verified",
         "status": "failed" if failed else "degraded" if degraded else "ready",
         "summary": {
@@ -105,6 +167,8 @@ def inspect_deployment(
             "failed": failed,
         },
         "domains": domains,
+        "capability_status": capability_status,
+        "conformance_evidence": conformance_evidence,
     }
 
 
@@ -114,6 +178,7 @@ def main() -> None:
     )
     parser.add_argument("--release-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--evidence-output", type=Path)
     parser.add_argument("--allow-degraded", action="store_true")
     args = parser.parse_args()
     try:
@@ -124,6 +189,12 @@ def main() -> None:
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(encoded, encoding="utf-8")
+    if args.evidence_output is not None and report["conformance_evidence"] is not None:
+        args.evidence_output.parent.mkdir(parents=True, exist_ok=True)
+        args.evidence_output.write_text(
+            json.dumps(report["conformance_evidence"], ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     print(encoded, end="")
     if report["status"] == "failed" or (
         report["status"] == "degraded" and not args.allow_degraded

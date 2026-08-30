@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-capability-status-v1.json",
+  "title": "Shadow Capability Runtime Status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "protocol", "deployment_id", "build_id", "profile_id", "generated_at", "correlation", "summary", "capabilities"],
+  "properties": {
+    "version": { "const": 1 },
+    "protocol": { "const": "shadow.capability-status.v1" },
+    "deployment_id": { "$ref": "#/$defs/id" },
+    "build_id": { "$ref": "#/$defs/sha256" },
+    "profile_id": { "$ref": "#/$defs/id" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "correlation": { "$ref": "#/$defs/correlation" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capabilities", "selected", "contract", "client", "deployed", "observed", "restore_tested", "failed"],
+      "properties": {
+        "capabilities": { "type": "integer", "minimum": 0 },
+        "selected": { "type": "integer", "minimum": 0 },
+        "contract": { "type": "integer", "minimum": 0 },
+        "client": { "type": "integer", "minimum": 0 },
+        "deployed": { "type": "integer", "minimum": 0 },
+        "observed": { "type": "integer", "minimum": 0 },
+        "restore_tested": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "capabilities": { "type": "array", "items": { "$ref": "#/$defs/capability" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "safe_id": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$" },
+    "correlation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "correlation_id", "trace_id", "request_id"],
+      "properties": {
+        "run_id": { "$ref": "#/$defs/safe_id" },
+        "correlation_id": { "$ref": "#/$defs/safe_id" },
+        "trace_id": { "$ref": "#/$defs/safe_id" },
+        "request_id": { "$ref": "#/$defs/safe_id" },
+        "causation_id": { "$ref": "#/$defs/safe_id" },
+        "idempotency_key": { "$ref": "#/$defs/safe_id" }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["unknown", "passed", "failed", "not_applicable"] },
+        "checked_at": { "type": "string", "format": "date-time" },
+        "evidence_id": { "$ref": "#/$defs/safe_id" },
+        "detail": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "correlation": { "$ref": "#/$defs/correlation" }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_ref", "plugin_id", "plugin_version", "instance_id", "product_id", "app_id", "capability_id", "effect", "risk_level", "selected", "client_channels", "contract_sha256", "maturity", "stages"],
+      "properties": {
+        "capability_ref": { "type": "string", "pattern": "^shadow://capabilities/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+        "plugin_id": { "$ref": "#/$defs/id" },
+        "plugin_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+        "instance_id": { "$ref": "#/$defs/id" },
+        "product_id": { "$ref": "#/$defs/id" },
+        "app_id": { "$ref": "#/$defs/id" },
+        "capability_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+        "effect": { "enum": ["read", "analyze", "draft", "write", "delete", "publish", "export", "execute", "permission"] },
+        "risk_level": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+        "selected": { "type": "boolean" },
+        "client_channels": { "type": "array", "uniqueItems": true, "items": { "enum": ["app", "dsh", "nexus"] } },
+        "contract_sha256": { "$ref": "#/$defs/sha256" },
+        "maturity": { "enum": ["not-selected", "none", "contract", "client", "deployed", "observed", "restore-tested", "failed"] },
+        "stages": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contract", "client", "deployed", "observed", "restore_tested"],
+          "properties": {
+            "contract": { "$ref": "#/$defs/stage" },
+            "client": { "$ref": "#/$defs/stage" },
+            "deployed": { "$ref": "#/$defs/stage" },
+            "observed": { "$ref": "#/$defs/stage" },
+            "restore_tested": { "$ref": "#/$defs/stage" }
+          }
+        }
+      }
+    }
+  }
+}
