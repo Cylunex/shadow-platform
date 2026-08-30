@@ -154,7 +154,17 @@ dependencies，避免 Profile 内产生第二份宿主运行时。
 正式 Shadow Profile 不包含 Dynamic Extension 或外部市场安装入口。实验性扩展使用不同
 Profile、DSH_HOME 和凭据边界，不能注册正式领域能力 ID。
 
-## 10. 当前范围
+## 10. Entity Registry
+
+领域可以在 `contracts/surfaces.yaml` 的顶层声明 `entities`。Entity 必须引用当前主 Summary
+Surface，并通过 JSON Pointer 从同一份摘要响应中投影值；它不会触发额外请求或建立中央事实表。
+`sensitivity`、`freshness_seconds` 和关联的 `action_ids` 都是运行时合同的一部分。Compiler 会
+校验 Entity、Summary Surface 与 Quick Action 的引用，Nexus 加载 Runtime 时再次防御性校验。
+
+领域内 Entity `id` 必须稳定且唯一，全局身份按 `<domain>.<entity-id>` 解释。变更值的含义时应
+新增 Entity 或明确迁移，不能在相同 id 下静默改变单位或语义。
+
+## 11. 当前范围
 
 Platform 已完成协议、校验、HTTP/MCP/Composition Builder、按需 Skill 工具限制、L3/L4 回执、
 Surface 合同，以及面向 DSH、Nexus、App 的统一 Profile Compiler。领域首批为 Health、Ledger、

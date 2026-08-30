@@ -6,6 +6,21 @@ presentation:
   icon: app
   color: "#64748B"
   order: 10
+entities:
+  - id: record-count
+    label: Records
+    class: counter
+    source_surface_id: summary
+    value_pointer: /count
+    unit: items
+    sensitivity: personal
+    freshness_seconds: 3600
+    action_ids: [quick-note]
+    attention:
+      - id: stale-records
+        operator: stale
+        severity: attention
+        message: Record count needs refresh
 surfaces:
   - id: summary
     type: summary

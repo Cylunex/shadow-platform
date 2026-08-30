@@ -59,6 +59,27 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
     assert nexus["domains"][0]["surfaces"][2]["action"]["intent"] == (
         "conformance.draft.note"
     )
+    assert nexus["domains"][0]["entities"] == [
+        {
+            "id": "record-count",
+            "label": "Records",
+            "class": "counter",
+            "source_surface_id": "summary",
+            "value_pointer": "/count",
+            "unit": "items",
+            "sensitivity": "personal",
+            "freshness_seconds": 3600,
+            "action_ids": ["quick-note"],
+            "attention": [
+                {
+                    "id": "stale-records",
+                    "operator": "stale",
+                    "severity": "attention",
+                    "message": "Record count needs refresh",
+                }
+            ],
+        }
+    ]
     assert nexus["domains"][0]["connection"]["base_url_env"] == (
         "SHADOW_CONFORMANCE_BASE_URL"
     )
@@ -266,3 +287,68 @@ def test_quick_action_must_match_one_capture_surface(tmp_path) -> None:
 
     with pytest.raises(PluginContractError, match="must match one capture surface"):
         build_shadow_profile(**arguments)
+
+
+def test_entity_registry_references_declared_summary_and_actions(tmp_path) -> None:
+    root = tmp_path / "plugin"
+    shutil.copytree(ROOT / "fixtures" / "conformance-plugin", root)
+    surfaces_path = root / "contracts" / "surfaces.yaml"
+    surfaces = yaml.safe_load(surfaces_path.read_text("utf-8"))
+    surfaces["entities"][0]["action_ids"] = ["missing-action"]
+    surfaces_path.write_text(yaml.safe_dump(surfaces), encoding="utf-8")
+    arguments = _arguments(tmp_path / "output")
+    arguments["plugin_roots"] = [root]
+
+    with pytest.raises(PluginContractError, match="unknown quick action"):
+        build_shadow_profile(**arguments)
+
+
+def test_portable_sync_and_space_contracts() -> None:
+    validate_document(
+        {
+            "protocol": "shadow.portable.v1",
+            "generatedAt": "2026-08-30T00:00:00Z",
+            "buildId": "build-example",
+            "preferences": {},
+            "entities": [],
+            "activity": [],
+            "trust": {},
+            "memories": [],
+            "contextRefs": [],
+        },
+        contract_schema_path(ROOT, "shadow-portable-export.schema.json"),
+        label="portable export",
+    )
+    validate_document(
+        {
+            "protocol": "shadow.sync.v1",
+            "space_id": "space_example123",
+            "device_id": "device_example123",
+            "sequence": 1,
+            "previous_hash": None,
+            "key_id": "device-key-1",
+            "nonce": "0123456789abcdef",
+            "ciphertext": "opaque",
+            "created_at": "2026-08-30T00:00:00Z",
+        },
+        contract_schema_path(ROOT, "shadow-sync-envelope.schema.json"),
+        label="sync envelope",
+    )
+    validate_document(
+        {
+            "protocol": "shadow.space.v1",
+            "space_id": "space_example123",
+            "kind": "personal",
+            "owner": {"issuer": "https://issuer.example.com", "subject": "user-1"},
+            "members": [
+                {
+                    "issuer": "https://issuer.example.com",
+                    "subject": "user-1",
+                    "role": "owner",
+                }
+            ],
+            "created_at": "2026-08-30T00:00:00Z",
+        },
+        contract_schema_path(ROOT, "shadow-space.schema.json"),
+        label="space",
+    )

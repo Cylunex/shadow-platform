@@ -91,6 +91,11 @@
         ]
       }
     },
+    "entities": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/entity" }
+    },
     "review": {
       "type": "object",
       "additionalProperties": false,
@@ -123,6 +128,55 @@
         "unit": { "type": "string", "maxLength": 16 },
         "tone": { "enum": ["neutral", "good", "attention", "warning"] }
       }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "class", "source_surface_id", "value_pointer", "sensitivity"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "class": {
+          "enum": ["measurement", "counter", "money", "status", "progress", "content", "schedule", "device", "location", "custom"]
+        },
+        "source_surface_id": { "$ref": "#/$defs/id" },
+        "value_pointer": { "$ref": "#/$defs/json_pointer" },
+        "detail_pointer": { "$ref": "#/$defs/json_pointer" },
+        "observed_at_pointer": { "$ref": "#/$defs/json_pointer" },
+        "unit": { "type": "string", "maxLength": 16 },
+        "icon": { "$ref": "#/$defs/id" },
+        "tone": { "enum": ["neutral", "good", "attention", "warning"] },
+        "sensitivity": { "enum": ["public", "personal", "sensitive", "restricted"] },
+        "freshness_seconds": { "type": "integer", "minimum": 60, "maximum": 31536000 },
+        "order": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "action_ids": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "attention": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/entity_attention" }
+        }
+      }
+    },
+    "entity_attention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "operator", "severity", "message"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "operator": { "enum": ["stale", "unavailable", "above", "below"] },
+        "threshold": { "type": "number" },
+        "severity": { "enum": ["attention", "warning"] },
+        "message": { "type": "string", "minLength": 1, "maxLength": 120 }
+      },
+      "allOf": [{
+        "if": { "properties": { "operator": { "enum": ["above", "below"] } } },
+        "then": { "required": ["threshold"] }
+      }]
     },
     "quick_action": {
       "type": "object",

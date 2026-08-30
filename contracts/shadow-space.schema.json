@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-space-v1.json",
+  "title": "Shadow Space",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "space_id", "kind", "owner", "members", "created_at"],
+  "properties": {
+    "protocol": { "const": "shadow.space.v1" },
+    "space_id": { "type": "string", "pattern": "^space_[A-Za-z0-9-]{8,80}$" },
+    "kind": { "enum": ["personal", "household"] },
+    "owner": { "$ref": "#/$defs/principal" },
+    "members": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/member" } },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "principal": {
+      "type": "object", "additionalProperties": false, "required": ["issuer", "subject"],
+      "properties": { "issuer": { "type": "string", "minLength": 1 }, "subject": { "type": "string", "minLength": 1 } }
+    },
+    "member": {
+      "type": "object", "additionalProperties": false, "required": ["issuer", "subject", "role"],
+      "properties": {
+        "issuer": { "type": "string", "minLength": 1 },
+        "subject": { "type": "string", "minLength": 1 },
+        "role": { "enum": ["owner", "editor", "viewer"] }
+      }
+    }
+  }
+}

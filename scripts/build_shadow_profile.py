@@ -120,6 +120,33 @@ def _surface_document(plugin: ValidatedPlugin, platform_root: Path) -> dict[str,
             raise PluginContractError(
                 f"{plugin.plugin_id}: surface references unknown operation {operation_id}"
             )
+    surfaces_by_id = {surface["id"]: surface for surface in document["surfaces"]}
+    if len(surfaces_by_id) != len(document["surfaces"]):
+        raise PluginContractError(f"{plugin.plugin_id}: surface ids must be unique")
+    entities = document.get("entities", [])
+    entity_ids = {entity["id"] for entity in entities}
+    if len(entity_ids) != len(entities):
+        raise PluginContractError(f"{plugin.plugin_id}: entity ids must be unique")
+    primary_summary = next(
+        (surface for surface in document["surfaces"] if surface["type"] == "summary"),
+        None,
+    )
+    for entity in entities:
+        source = surfaces_by_id.get(entity["source_surface_id"])
+        if source is None or source["type"] != "summary" or source is not primary_summary:
+            entity_id = entity["id"]
+            raise PluginContractError(
+                f"{plugin.plugin_id}: entity {entity_id} must reference "
+                "the primary summary surface"
+            )
+        for action_id in entity.get("action_ids", []):
+            action = surfaces_by_id.get(action_id)
+            if action is None or action["type"] != "quick-action":
+                entity_id = entity["id"]
+                raise PluginContractError(
+                    f"{plugin.plugin_id}: entity {entity_id} references "
+                    f"unknown quick action {action_id}"
+                )
     captures = [item for item in document["surfaces"] if item["type"] == "capture"]
     for surface in document["surfaces"]:
         if surface["type"] != "quick-action":
@@ -251,6 +278,7 @@ def _nexus_projection(
             "context_env": instance.get("context_env", {}),
         },
         "surfaces": projected_surfaces,
+        "entities": surfaces.get("entities", []),
         "review": projected_review,
         "app_id": product.get("app_id"),
         "app": None
@@ -313,6 +341,9 @@ def build_shadow_profile(
         "shadow-context-pack.schema.json",
         "shadow-capture-envelope.schema.json",
         "shadow-suggestion.schema.json",
+        "shadow-portable-export.schema.json",
+        "shadow-sync-envelope.schema.json",
+        "shadow-space.schema.json",
         "shadow-plugin.schema.json",
         "shadow-plugin-instance.schema.json",
         "agent-profile.schema.json",

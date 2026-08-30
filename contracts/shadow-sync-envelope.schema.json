@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-sync-envelope-v1.json",
+  "title": "Shadow Encrypted Sync Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "space_id", "device_id", "sequence", "previous_hash", "key_id", "nonce", "ciphertext", "created_at"],
+  "properties": {
+    "protocol": { "const": "shadow.sync.v1" },
+    "space_id": { "type": "string", "pattern": "^space_[A-Za-z0-9-]{8,80}$" },
+    "device_id": { "type": "string", "pattern": "^device_[A-Za-z0-9-]{8,80}$" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "previous_hash": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "key_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "nonce": { "type": "string", "minLength": 16, "maxLength": 128 },
+    "ciphertext": { "type": "string", "minLength": 1, "maxLength": 8388608 },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

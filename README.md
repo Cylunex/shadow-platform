@@ -35,6 +35,8 @@ python -m venv .venv
 ## 文档
 
 - [架构概览](docs/architecture.md)
+- [Personal Context OS 产品与演进设计](docs/personal-context-os.md)
+- [本地优先同步、Spaces 与扩展边界](docs/sync-and-extension.md)
 - [应用接入](docs/app-integration.md)
 - [Asset v1](docs/asset-service-v1.md)
 - [通知与收件箱](docs/notifications.md)

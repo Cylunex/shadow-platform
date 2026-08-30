@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-portable-v1.json",
+  "title": "Shadow Portable Export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "generatedAt", "buildId", "preferences", "entities", "activity", "trust", "memories", "contextRefs"],
+  "properties": {
+    "protocol": { "const": "shadow.portable.v1" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "buildId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "preferences": { "type": "object" },
+    "entities": { "type": "array", "items": { "type": "object" } },
+    "activity": { "type": "array", "items": { "type": "object" } },
+    "trust": { "type": "object" },
+    "memories": { "type": "array", "items": { "type": "object" } },
+    "contextRefs": { "type": "array", "items": { "type": "object" } }
+  }
+}
