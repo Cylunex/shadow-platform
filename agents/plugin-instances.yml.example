@@ -10,7 +10,7 @@ instances:
     enabled: true
   archive-production:
     plugin_id: shadow-archive
-    plugin_version: 0.1.0
+    plugin_version: 0.3.0
     environment: production
     base_url_env: SHADOW_ARCHIVE_BASE_URL
     credential_env: SHADOW_ARCHIVE_AGENT_TOKEN
@@ -28,7 +28,7 @@ instances:
     enabled: true
   ledger-production:
     plugin_id: shadow-ledger
-    plugin_version: 1.0.1
+    plugin_version: 1.1.0
     environment: production
     base_url_env: SHADOW_LEDGER_BASE_URL
     credential_env: SHADOW_LEDGER_AGENT_TOKEN
