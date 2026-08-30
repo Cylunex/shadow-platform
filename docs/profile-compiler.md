@@ -21,7 +21,7 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 
 - `shadow-plugin.yaml`：稳定插件身份、版本和描述符引用；
 - `agent/manifest.yaml` 与 OpenAPI/MCP：能力语义和机器接口；
-- `contracts/surfaces.yaml`：展示信息、Summary、Capture、Review、Search 和 App Link；
+- `contracts/surfaces.yaml`：展示信息、Summary、Quick Action、Capture、Review、Search 和 App Link；
 - Deployment：Canonical Product ID，以及该产品进入 DSH、Nexus、App 中的哪些通道；
 - Instance：只保存真实地址和凭据对应的环境变量名；
 - App Catalog：移动入口、认证模式、健康检查和可信别名；
@@ -44,7 +44,7 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 
 - DSH 投影包含 Tools、Skills、Policy 和运行时映射；
 - Nexus 投影包含动态领域、连接变量名、Surface、标准 Review 操作和 Catalog 提供的应用入口；
-- App 投影包含可信 Web 入口、别名、图标、顺序和原生能力边界；
+- App 投影包含可信 Web 入口、默认首页模块、别名、图标、顺序和原生能力边界；
 - Lock 记录所有输入摘要、Canonical Identity Map、三个输出摘要和 DSH Bundle 树摘要。
 - Deployment Report 汇总部署/构建/Profile 身份、通道覆盖、产物摘要和非秘密警告，供运维核对；
   报告只记录环境变量名，不记录地址、Token 或凭据值。
@@ -90,6 +90,17 @@ Doctor 先验证不可变 Release，再按 Nexus 投影检查每个领域所需�
 Platform 同时发布 `shadow.context.v1`、`shadow.capture.v1` 与 `shadow.suggestion.v1` JSON
 Schema。Context Pack 只保存稳定 `shadow://` 引用和短期授权；Capture Envelope 统一移动分享
 来源；Suggestion 强制携带理由、证据引用、有效期、数据缺失率和允许反馈动作。
+
+## 默认首页与快捷操作
+
+Deployment 的 `app_home_module_id` 会编译为 App Runtime v5 的
+`platform.homeModuleId`，并且必须引用一个启用的 App 模块。生产部署通常选择 `nexus`，从而让
+Android 壳直接进入统一工作台，同时保留各领域页面作为纵深入口。
+
+领域可以声明 `quick-action` Surface，把称重、记支出等高频入口上浮到 Nexus。编译器要求每个
+Quick Action 与且仅与一个 Capture Surface 的 capability、operation、risk 和 intent 前缀匹配；
+浏览器表单不能凭空获得新的写权限。Nexus 仍通过领域已有 Draft/Review 协议执行，领域继续负责
+校验、幂等、事实提交和回执。
 
 ## 一致性与降级
 

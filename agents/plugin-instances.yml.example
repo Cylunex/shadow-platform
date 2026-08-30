@@ -18,7 +18,7 @@ instances:
     enabled: true
   health-production:
     plugin_id: shadow-health
-    plugin_version: 0.1.0
+    plugin_version: 0.1.1
     environment: production
     base_url_env: SHADOW_HEALTH_BASE_URL
     credential_env: SHADOW_HEALTH_AGENT_TOKEN
@@ -28,7 +28,7 @@ instances:
     enabled: true
   ledger-production:
     plugin_id: shadow-ledger
-    plugin_version: 1.0.0
+    plugin_version: 1.0.1
     environment: production
     base_url_env: SHADOW_LEDGER_BASE_URL
     credential_env: SHADOW_LEDGER_AGENT_TOKEN

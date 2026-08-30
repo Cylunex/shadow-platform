@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -49,6 +50,15 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
         "risk_level": "L0",
         "confirmation_resource": None,
     }
+    assert nexus["domains"][0]["surfaces"][0]["display"]["metrics"][0] == {
+        "id": "records",
+        "label": "Records",
+        "value_pointer": "/count",
+        "unit": "items",
+    }
+    assert nexus["domains"][0]["surfaces"][2]["action"]["intent"] == (
+        "conformance.draft.note"
+    )
     assert nexus["domains"][0]["connection"]["base_url_env"] == (
         "SHADOW_CONFORMANCE_BASE_URL"
     )
@@ -56,7 +66,8 @@ def test_profile_compiler_projects_one_source_to_all_runtimes(tmp_path, monkeypa
         "canonical_url": "https://conformance.example.com/",
         "aliases": ["https://nas.example.com/conformance/"],
     }
-    assert app["schemaVersion"] == 4
+    assert app["schemaVersion"] == 5
+    assert app["platform"]["homeModuleId"] == "conformance"
     assert app["modules"][0]["product_id"] == "shadow-conformance"
     assert app["modules"][0]["canonical_url"] == "https://conformance.example.com/"
     assert lock["build_id"] == nexus["build_id"] == app["platform"]["buildId"]
@@ -238,3 +249,20 @@ def test_search_surface_requires_generic_item_projection() -> None:
             contract_schema_path(ROOT, "shadow-surfaces.schema.json"),
             label="search surface fixture",
         )
+
+
+def test_quick_action_must_match_one_capture_surface(tmp_path) -> None:
+    root = tmp_path / "plugin"
+    shutil.copytree(ROOT / "fixtures" / "conformance-plugin", root)
+    surfaces_path = root / "contracts" / "surfaces.yaml"
+    surfaces = yaml.safe_load(surfaces_path.read_text("utf-8"))
+    quick_action = next(
+        item for item in surfaces["surfaces"] if item["type"] == "quick-action"
+    )
+    quick_action["action"]["intent"] = "conformance.unknown.note"
+    surfaces_path.write_text(yaml.safe_dump(surfaces), encoding="utf-8")
+    arguments = _arguments(tmp_path / "output")
+    arguments["plugin_roots"] = [root]
+
+    with pytest.raises(PluginContractError, match="must match one capture surface"):
+        build_shadow_profile(**arguments)

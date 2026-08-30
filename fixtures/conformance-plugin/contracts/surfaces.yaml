@@ -3,7 +3,7 @@ presentation:
   short_id: conformance
   title: Conformance
   caption: Runtime projection contract fixture
-  icon: conformance
+  icon: app
   color: "#64748B"
   order: 10
 surfaces:
@@ -13,11 +13,36 @@ surfaces:
     operation_id: get_record
     display:
       detail_pointer: /summary
+      metrics:
+        - id: records
+          label: Records
+          value_pointer: /count
+          unit: items
   - id: capture
     type: capture
     capability: conformance.drafts.create
     operation_id: create_draft
     risk_level: L1
     intent_prefixes: [conformance.draft]
+  - id: quick-note
+    type: quick-action
+    capability: conformance.drafts.create
+    operation_id: create_draft
+    risk_level: L1
+    action:
+      title: Quick note
+      description: Create a bounded conformance draft
+      intent: conformance.draft.note
+      icon: note
+      order: 10
+      submit_label: Save
+      success_message: Saved
+      summary_template: "Quick note: {title}"
+      fields:
+        - id: title
+          label: Title
+          type: text
+          required: true
+          max_length: 120
   - id: app
     type: app-link

@@ -120,6 +120,26 @@ def _surface_document(plugin: ValidatedPlugin, platform_root: Path) -> dict[str,
             raise PluginContractError(
                 f"{plugin.plugin_id}: surface references unknown operation {operation_id}"
             )
+    captures = [item for item in document["surfaces"] if item["type"] == "capture"]
+    for surface in document["surfaces"]:
+        if surface["type"] != "quick-action":
+            continue
+        intent = surface["action"]["intent"]
+        matching = [
+            capture
+            for capture in captures
+            if capture["capability"] == surface["capability"]
+            and capture["operation_id"] == surface["operation_id"]
+            and capture["risk_level"] == surface["risk_level"]
+            and any(
+                intent == prefix or intent.startswith(f"{prefix}.")
+                for prefix in capture["intent_prefixes"]
+            )
+        ]
+        if len(matching) != 1:
+            raise PluginContractError(
+                f"{plugin.plugin_id}: quick action {surface['id']} must match one capture surface"
+            )
     for operation_id in (document.get("review") or {}).values():
         if not isinstance(operation_id, str) or operation_id in {
             "shadow.review.v1",
@@ -381,6 +401,13 @@ def build_shadow_profile(
             }
         )
 
+    home_module_id = deployment["app_home_module_id"]
+    home_modules = [item for item in app_modules if item["id"] == home_module_id]
+    if len(home_modules) != 1 or not home_modules[0]["enabled"]:
+        raise PluginContractError(
+            f"App home module must reference one enabled App projection: {home_module_id}"
+        )
+
     release_root = output_dir.resolve() / deployment["id"]
     target = release_root / build_id
     if target.exists():
@@ -414,12 +441,13 @@ def build_shadow_profile(
     _write_json(
         staging / "shadow-app-runtime.json",
         {
-            "schemaVersion": 4,
+            "schemaVersion": 5,
             "platform": {
                 "catalogVersion": 1,
                 "deploymentId": deployment["id"],
                 "buildId": build_id,
                 "identityIssuer": deployment["identity_issuer"],
+                "homeModuleId": home_module_id,
             },
             "modules": sorted(app_modules, key=lambda item: item["order"]),
         },

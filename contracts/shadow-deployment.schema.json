@@ -4,11 +4,12 @@
   "title": "Shadow Deployment Model",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "id", "identity_issuer", "products"],
+  "required": ["version", "id", "identity_issuer", "app_home_module_id", "products"],
   "properties": {
     "version": { "const": 1 },
     "id": { "$ref": "#/$defs/id" },
     "identity_issuer": { "$ref": "#/$defs/https_url" },
+    "app_home_module_id": { "$ref": "#/$defs/id" },
     "products": {
       "type": "object",
       "minProperties": 1,

@@ -1,6 +1,7 @@
 version: 1
 id: shadow-conformance-test
 identity_issuer: https://identity.example.com/
+app_home_module_id: conformance
 products:
   shadow-conformance:
     short_id: conformance

@@ -1,6 +1,7 @@
 version: 1
 id: shadow-production
 identity_issuer: https://identity.example.com/
+app_home_module_id: nexus
 products:
   shadow-nexus:
     short_id: nexus
