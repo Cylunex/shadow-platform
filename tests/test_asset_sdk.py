@@ -46,3 +46,34 @@ def test_asset_client_error_never_echoes_response_body_or_token():
 
     assert "app-secret" not in str(caught.value)
     assert "403" in str(caught.value)
+
+
+def test_asset_client_delegates_and_resolves_reference():
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        if request.url.path.endswith("asset-reference-delegations"):
+            return httpx.Response(201, json={"id": "reference-1"})
+        assert request.url.params["resource_uri"] == "shadow://health/meals/2026-09-01/lunch"
+        assert request.url.params["usage_role"] == "meal.photo"
+        return httpx.Response(200, json=[{"resolved_version_id": "version-1"}])
+
+    with AssetClient(
+        "https://assets.test", "app-secret", transport=httpx.MockTransport(handler)
+    ) as client:
+        delegated = client.delegate_reference(
+            asset_id="asset-1",
+            target_app_id="health",
+            resource_uri="shadow://health/meals/2026-09-01/lunch",
+            usage_role="meal.photo",
+            reference_key="health:meal:asset-1",
+            pinned_version_id="version-1",
+        )
+        resolved = client.resolve_references(
+            "shadow://health/meals/2026-09-01/lunch", usage_role="meal.photo"
+        )
+
+    assert delegated == {"id": "reference-1"}
+    assert resolved == [{"resolved_version_id": "version-1"}]
+    assert calls == ["/v1/asset-reference-delegations", "/v1/asset-references/resolve"]

@@ -13,6 +13,8 @@
 | `POST /v1/assets/{id}/trash` | 将 Asset 放入回收站 | asset id |
 | `POST /v1/assets/{id}/restore` | 在保留期内恢复 Asset | asset id |
 | `POST /v1/asset-references` | 创建/恢复业务引用 | `app_id + reference_key` |
+| `POST /v1/asset-reference-delegations` | 创建者向已注册目标应用显式委派具体引用 | `target_app_id + reference_key` |
+| `GET /v1/asset-references/resolve` | 当前应用按稳定 URI/usage role 解析活动引用与版本 | 只读 |
 | `DELETE /v1/asset-references/{id}` | 解绑业务引用 | reference id |
 | `POST /v1/asset-derivatives` | 登记衍生版本关系 | source + recipe + version + params hash |
 | `POST /v1/asset-versions/{id}/access-grants` | 签发版本级短时访问 | 可重复 |

@@ -120,6 +120,12 @@ class AssetReferenceCreate(BaseModel):
         return self
 
 
+class AssetReferenceDelegationCreate(AssetReferenceCreate):
+    target_app_id: str = Field(
+        min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9-]{0,63}$"
+    )
+
+
 class AssetReferenceView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -129,11 +135,18 @@ class AssetReferenceView(BaseModel):
     resource_uri: str
     usage_role: str
     reference_key: str
+    delegated_by_app_id: str | None
     binding_mode: BindingMode
     pinned_version_id: str | None
     state: str
     created_at: datetime
     released_at: datetime | None
+
+
+class AssetReferenceResolution(BaseModel):
+    reference: AssetReferenceView
+    asset: AssetView
+    resolved_version_id: str
 
 
 class AssetReferenceRelease(BaseModel):

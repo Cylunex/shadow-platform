@@ -157,6 +157,51 @@ class AssetClient:
             )
         )
 
+    def delegate_reference(
+        self,
+        *,
+        asset_id: str,
+        target_app_id: str,
+        resource_uri: str,
+        usage_role: str,
+        reference_key: str,
+        binding_mode: Literal["pinned", "latest"] = "pinned",
+        pinned_version_id: str | None = None,
+    ) -> dict[str, Any]:
+        return self._json(
+            self._client.post(
+                "/v1/asset-reference-delegations",
+                json={
+                    "asset_id": asset_id,
+                    "target_app_id": target_app_id,
+                    "resource_uri": resource_uri,
+                    "usage_role": usage_role,
+                    "reference_key": reference_key,
+                    "binding_mode": binding_mode,
+                    "pinned_version_id": pinned_version_id,
+                },
+            )
+        )
+
+    def resolve_references(
+        self, resource_uri: str, *, usage_role: str | None = None
+    ) -> list[dict[str, Any]]:
+        params = {"resource_uri": resource_uri}
+        if usage_role is not None:
+            params["usage_role"] = usage_role
+        response = self._client.get("/v1/asset-references/resolve", params=params)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            request_id = response.headers.get("x-request-id", "unknown")
+            raise AssetClientError(
+                f"asset API returned {response.status_code}; request_id={request_id}"
+            ) from exc
+        payload = response.json()
+        if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
+            raise AssetClientError("asset API returned a non-list response")
+        return payload
+
     def release_reference(self, reference_id: str) -> dict[str, Any]:
         return self._json(self._client.delete(f"/v1/asset-references/{reference_id}"))
 

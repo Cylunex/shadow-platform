@@ -170,6 +170,9 @@ class AssetReference(Base):
     resource_uri: Mapped[str] = mapped_column(String(1024))
     usage_role: Mapped[str] = mapped_column(String(64))
     reference_key: Mapped[str] = mapped_column(String(512))
+    delegated_by_app_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     binding_mode: Mapped[str] = mapped_column(String(16), default="pinned")
     pinned_version_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     state: Mapped[str] = mapped_column(String(16), default="active", index=True)

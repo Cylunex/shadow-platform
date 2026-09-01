@@ -22,6 +22,9 @@ def test_asset_migration_round_trip_preserves_legacy_tables(tmp_path, monkeypatc
     engine = create_engine(database_url)
     tables = set(inspect(engine).get_table_names())
     assert {"assets", "asset_blobs", "asset_versions", "asset_references"} <= tables
+    assert "delegated_by_app_id" in {
+        column["name"] for column in inspect(engine).get_columns("asset_references")
+    }
     engine.dispose()
 
     command.downgrade(config, "base")

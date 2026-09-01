@@ -23,6 +23,7 @@ from shadow_sdk.service_auth import hash_service_token
 
 TRAVEL_TOKEN = "travel-secret-token-at-least-32-bytes"
 HEALTH_TOKEN = "health-secret-token-at-least-32-bytes"
+NEXUS_TOKEN = "nexus-secret-token-at-least-32-bytes"
 OWNER_ID = "10000000-0000-4000-8000-000000000001"
 
 
@@ -49,6 +50,7 @@ def make_client(tmp_path, **overrides):
         service_token_hashes={
             "travel": (hash_service_token(TRAVEL_TOKEN),),
             "health": (hash_service_token(HEALTH_TOKEN),),
+            "nexus": (hash_service_token(NEXUS_TOKEN),),
         },
         access_signing_key="test-signing-key-with-sufficient-entropy",
     )
@@ -71,6 +73,9 @@ def upload_asset(
     access_mode: str = "private",
     token: str = TRAVEL_TOKEN,
 ):
+    reference_app = (
+        "health" if token == HEALTH_TOKEN else "nexus" if token == NEXUS_TOKEN else "travel"
+    )
     headers = {**authorization(token), "Idempotency-Key": f"upload:{key}"}
     created = client.post(
         "/v1/upload-sessions",
@@ -85,7 +90,7 @@ def upload_asset(
             "content_type": content_type,
             "size_bytes": len(data),
             "initial_reference": {
-                "resource_uri": f"shadow://travel/assets/{key}",
+                "resource_uri": f"shadow://{reference_app}/assets/{key}",
                 "usage_role": "file",
                 "reference_key": f"travel:asset:{key}",
                 "binding_mode": "pinned",
@@ -106,7 +111,7 @@ def upload_asset(
             "content_type": content_type,
             "size_bytes": len(data),
             "initial_reference": {
-                "resource_uri": f"shadow://travel/assets/{key}",
+                "resource_uri": f"shadow://{reference_app}/assets/{key}",
                 "usage_role": "file",
                 "reference_key": f"travel:asset:{key}",
                 "binding_mode": "pinned",
@@ -295,6 +300,116 @@ def test_delegated_asset_can_be_referenced_by_another_app(tmp_path):
             json={"operation": "inline"},
         )
         assert granted.status_code == 200
+
+
+def test_private_asset_explicit_delegation_resolve_access_and_revoke(tmp_path):
+    client, _ = make_client(tmp_path)
+    with client:
+        asset = upload_asset(
+            client,
+            png_bytes(),
+            key="private-meal.png",
+            access_mode="private",
+            token=NEXUS_TOKEN,
+        )
+        resource_uri = "shadow://health/meals/2026-09-01/lunch"
+        delegated = client.post(
+            "/v1/asset-reference-delegations",
+            headers=authorization(NEXUS_TOKEN),
+            json={
+                "asset_id": asset["id"],
+                "target_app_id": "health",
+                "resource_uri": resource_uri,
+                "usage_role": "meal.photo",
+                "reference_key": "health:meal:2026-09-01:lunch:private-meal",
+                "binding_mode": "pinned",
+                "pinned_version_id": asset["current_version_id"],
+            },
+        )
+        assert delegated.status_code == 201, delegated.text
+        reference = delegated.json()
+        assert reference["app_id"] == "health"
+        assert reference["delegated_by_app_id"] == "nexus"
+
+        resolved = client.get(
+            "/v1/asset-references/resolve",
+            headers=authorization(HEALTH_TOKEN),
+            params={"resource_uri": resource_uri, "usage_role": "meal.photo"},
+        )
+        assert resolved.status_code == 200, resolved.text
+        assert resolved.json()[0]["resolved_version_id"] == asset["current_version_id"]
+        grant = client.post(
+            f"/v1/asset-versions/{asset['current_version_id']}/access-grants",
+            headers=authorization(HEALTH_TOKEN),
+            json={"operation": "inline"},
+        )
+        assert grant.status_code == 200
+        assert client.get(grant.json()["url"]).content == png_bytes()
+
+        unrelated = client.get(
+            "/v1/asset-references/resolve",
+            headers=authorization(TRAVEL_TOKEN),
+            params={"resource_uri": resource_uri, "usage_role": "meal.photo"},
+        )
+        assert unrelated.status_code == 400
+        denied = client.post(
+            f"/v1/asset-versions/{asset['current_version_id']}/access-grants",
+            headers=authorization(TRAVEL_TOKEN),
+            json={"operation": "inline"},
+        )
+        assert denied.status_code == 404
+
+        revoked = client.delete(
+            f"/v1/asset-references/{reference['id']}",
+            headers=authorization(NEXUS_TOKEN),
+        )
+        assert revoked.status_code == 200
+        assert client.get(
+            "/v1/asset-references/resolve",
+            headers=authorization(HEALTH_TOKEN),
+            params={"resource_uri": resource_uri},
+        ).json() == []
+        cannot_restore = client.post(
+            "/v1/asset-references",
+            headers=authorization(HEALTH_TOKEN),
+            json={
+                "asset_id": asset["id"],
+                "resource_uri": resource_uri,
+                "usage_role": "meal.photo",
+                "reference_key": "health:meal:2026-09-01:lunch:private-meal",
+                "binding_mode": "pinned",
+                "pinned_version_id": asset["current_version_id"],
+            },
+        )
+        assert cannot_restore.status_code == 404
+
+
+def test_asset_delegation_rejects_non_owner_unregistered_target_and_wrong_namespace(tmp_path):
+    client, _ = make_client(tmp_path)
+    with client:
+        asset = upload_asset(client, png_bytes(), key="owner-only.png")
+        base = {
+            "asset_id": asset["id"],
+            "target_app_id": "nexus",
+            "resource_uri": "shadow://nexus/meals/2026-09-01/lunch",
+            "usage_role": "meal.photo",
+            "reference_key": "health:meal:owner-only",
+            "binding_mode": "pinned",
+            "pinned_version_id": asset["current_version_id"],
+        }
+        assert client.post(
+            "/v1/asset-reference-delegations",
+            headers=authorization(HEALTH_TOKEN),
+            json=base,
+        ).status_code == 404
+        unknown = {**base, "target_app_id": "unknown", "resource_uri": "shadow://unknown/x"}
+        assert client.post(
+            "/v1/asset-reference-delegations", headers=authorization(), json=unknown
+        ).status_code == 400
+        wrong = {**base, "resource_uri": "shadow://travel/meals/2026-09-01/lunch"}
+        assert client.post(
+            "/v1/asset-reference-delegations", headers=authorization(), json=wrong
+        ).status_code == 400
 
 
 def test_pinned_reference_must_use_version_from_same_asset(tmp_path):

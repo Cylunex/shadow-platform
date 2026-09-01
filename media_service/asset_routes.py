@@ -32,7 +32,9 @@ from .asset_schemas import (
     AssetDerivativeCreate,
     AssetDerivativeView,
     AssetReferenceCreate,
+    AssetReferenceDelegationCreate,
     AssetReferenceRelease,
+    AssetReferenceResolution,
     AssetReferenceView,
     AssetUploadCreate,
     AssetUploadCreated,
@@ -148,25 +150,54 @@ def _asset_view(db: Session, asset: Asset) -> AssetView:
     )
 
 
-def _service_has_reference(db: Session, asset_id: str, app_id: str) -> bool:
-    return (
-        db.scalar(
-            select(func.count())
-            .select_from(AssetReference)
-            .where(
-                AssetReference.asset_id == asset_id,
-                AssetReference.app_id == app_id,
-                AssetReference.state == "active",
-            )
-        )
-        or 0
-    ) > 0
+def _service_reference(
+    db: Session, asset_id: str, app_id: str
+) -> AssetReference | None:
+    return db.scalar(
+        select(AssetReference).where(
+            AssetReference.asset_id == asset_id,
+            AssetReference.app_id == app_id,
+            AssetReference.state == "active",
+        ).limit(1)
+    )
 
 
 def _service_can_read(db: Session, asset: Asset, app_id: str) -> bool:
     if asset.created_by_app_id == app_id or asset.access_mode == "public":
         return True
-    return asset.access_mode == "delegated" and _service_has_reference(db, asset.id, app_id)
+    reference = _service_reference(db, asset.id, app_id)
+    if reference is None:
+        return False
+    return asset.access_mode == "delegated" or (
+        reference.delegated_by_app_id == asset.created_by_app_id
+    )
+
+
+def _resource_app_id(resource_uri: str) -> str:
+    return resource_uri.removeprefix("shadow://").split("/", 1)[0]
+
+
+def _resolved_reference(db: Session, reference: AssetReference) -> AssetReferenceResolution:
+    asset = db.get(Asset, reference.asset_id)
+    if (
+        not asset
+        or asset.lifecycle_state != "active"
+        or not _service_can_read(db, asset, reference.app_id)
+    ):
+        raise HTTPException(status_code=404, detail="asset reference not found")
+    version_id = (
+        reference.pinned_version_id
+        if reference.binding_mode == "pinned"
+        else asset.current_version_id
+    )
+    version = db.get(AssetVersion, version_id) if version_id else None
+    if not version or version.asset_id != asset.id or version.state != "ready":
+        raise HTTPException(status_code=409, detail="asset reference version is unavailable")
+    return AssetReferenceResolution(
+        reference=AssetReferenceView.model_validate(reference),
+        asset=_asset_view(db, asset),
+        resolved_version_id=version.id,
+    )
 
 
 def _audit(
@@ -267,6 +298,12 @@ def create_asset_upload(
         raise HTTPException(status_code=400, detail="invalid Idempotency-Key")
 
     fingerprint = _request_fingerprint(body)
+    if body.initial_reference and (
+        _resource_app_id(body.initial_reference.resource_uri) != identity.app_id
+    ):
+        raise HTTPException(
+            status_code=400, detail="initial resource URI must belong to calling app"
+        )
     existing = None
     if idempotency_key:
         existing = db.scalar(
@@ -691,6 +728,8 @@ def restore_asset(asset_id: str, identity: ServiceDep, db: DbDep):
 
 @router.post("/v1/asset-references", response_model=AssetReferenceView, status_code=201)
 def create_asset_reference(body: AssetReferenceCreate, identity: ServiceDep, db: DbDep):
+    if _resource_app_id(body.resource_uri) != identity.app_id:
+        raise HTTPException(status_code=400, detail="resource URI must belong to calling app")
     existing = db.scalar(
         select(AssetReference).where(
             AssetReference.app_id == identity.app_id,
@@ -715,9 +754,18 @@ def create_asset_reference(body: AssetReferenceCreate, identity: ServiceDep, db:
         if actual != expected:
             raise HTTPException(status_code=409, detail="reference_key payload mismatch")
         if existing.state == "released":
+            asset = db.get(Asset, existing.asset_id)
+            if (
+                not asset
+                or asset.lifecycle_state != "active"
+                or (
+                    asset.created_by_app_id != identity.app_id
+                    and asset.access_mode not in {"delegated", "public"}
+                )
+            ):
+                raise HTTPException(status_code=404, detail="asset not found")
             existing.state = "active"
             existing.released_at = None
-            asset = db.get(Asset, existing.asset_id)
             if asset:
                 asset.zero_referenced_at = None
             db.commit()
@@ -743,6 +791,7 @@ def create_asset_reference(body: AssetReferenceCreate, identity: ServiceDep, db:
         resource_uri=body.resource_uri,
         usage_role=body.usage_role,
         reference_key=body.reference_key,
+        delegated_by_app_id=None,
         binding_mode=body.binding_mode,
         pinned_version_id=body.pinned_version_id,
         state="active",
@@ -768,12 +817,136 @@ def create_asset_reference(body: AssetReferenceCreate, identity: ServiceDep, db:
     return reference
 
 
+@router.post(
+    "/v1/asset-reference-delegations",
+    response_model=AssetReferenceView,
+    status_code=201,
+)
+def delegate_asset_reference(
+    body: AssetReferenceDelegationCreate,
+    request: Request,
+    identity: ServiceDep,
+    db: DbDep,
+):
+    """资产创建者把一个具体私有资产引用显式委派给目标应用。"""
+    if body.target_app_id == identity.app_id:
+        raise HTTPException(status_code=400, detail="use the regular reference endpoint")
+    if body.target_app_id not in request.app.state.settings.service_token_hashes:
+        raise HTTPException(status_code=400, detail="target app is not registered")
+    if _resource_app_id(body.resource_uri) != body.target_app_id:
+        raise HTTPException(status_code=400, detail="resource URI must belong to target app")
+    asset = db.get(Asset, body.asset_id)
+    if (
+        not asset
+        or asset.lifecycle_state != "active"
+        or asset.created_by_app_id != identity.app_id
+    ):
+        raise HTTPException(status_code=404, detail="asset not found")
+    if body.pinned_version_id:
+        version = db.get(AssetVersion, body.pinned_version_id)
+        if not version or version.asset_id != asset.id or version.state != "ready":
+            raise HTTPException(status_code=400, detail="pinned version does not belong to asset")
+    existing = db.scalar(
+        select(AssetReference).where(
+            AssetReference.app_id == body.target_app_id,
+            AssetReference.reference_key == body.reference_key,
+        )
+    )
+    expected = (
+        body.asset_id,
+        body.resource_uri,
+        body.usage_role,
+        body.binding_mode,
+        body.pinned_version_id,
+        identity.app_id,
+    )
+    if existing:
+        actual = (
+            existing.asset_id,
+            existing.resource_uri,
+            existing.usage_role,
+            existing.binding_mode,
+            existing.pinned_version_id,
+            existing.delegated_by_app_id,
+        )
+        if actual != expected:
+            raise HTTPException(status_code=409, detail="reference_key payload mismatch")
+        if existing.state == "released":
+            existing.state = "active"
+            existing.released_at = None
+            asset.zero_referenced_at = None
+            db.commit()
+        return existing
+    reference = AssetReference(
+        id=str(uuid.uuid4()),
+        asset_id=asset.id,
+        app_id=body.target_app_id,
+        resource_uri=body.resource_uri,
+        usage_role=body.usage_role,
+        reference_key=body.reference_key,
+        delegated_by_app_id=identity.app_id,
+        binding_mode=body.binding_mode,
+        pinned_version_id=body.pinned_version_id,
+        state="active",
+        created_at=utcnow(),
+    )
+    db.add(reference)
+    asset.zero_referenced_at = None
+    _outbox(
+        db,
+        event_type="asset.reference.delegated",
+        aggregate_type="asset",
+        aggregate_id=asset.id,
+        payload={
+            "asset_id": asset.id,
+            "reference_id": reference.id,
+            "app_id": body.target_app_id,
+            "delegated_by_app_id": identity.app_id,
+        },
+    )
+    _audit(
+        db,
+        identity=identity,
+        action="asset.reference.delegated",
+        asset_id=asset.id,
+        details={"reference_id": reference.id, "target_app_id": body.target_app_id},
+    )
+    db.commit()
+    return reference
+
+
+@router.get(
+    "/v1/asset-references/resolve",
+    response_model=list[AssetReferenceResolution],
+)
+def resolve_asset_references(
+    identity: ServiceDep,
+    db: DbDep,
+    resource_uri: Annotated[str, Query(min_length=10, max_length=1024)],
+    usage_role: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
+):
+    if _resource_app_id(resource_uri) != identity.app_id:
+        raise HTTPException(status_code=400, detail="resource URI must belong to calling app")
+    statement = select(AssetReference).where(
+        AssetReference.app_id == identity.app_id,
+        AssetReference.resource_uri == resource_uri,
+        AssetReference.state == "active",
+    )
+    if usage_role is not None:
+        statement = statement.where(AssetReference.usage_role == usage_role)
+    references = list(db.scalars(statement.order_by(AssetReference.created_at, AssetReference.id)))
+    return [_resolved_reference(db, reference) for reference in references]
+
+
 @router.delete("/v1/asset-references/{reference_id}", response_model=AssetReferenceRelease)
 def release_asset_reference(reference_id: str, identity: ServiceDep, db: DbDep):
     reference = db.scalar(
         select(AssetReference).where(
             AssetReference.id == reference_id,
-            AssetReference.app_id == identity.app_id,
+            (
+                (AssetReference.app_id == identity.app_id)
+                | (AssetReference.delegated_by_app_id == identity.app_id)
+            ),
         )
     )
     if not reference:

@@ -52,6 +52,11 @@ erDiagram
 - `delegated`：持有活动引用的其他应用也可授权访问。
 - `public`：可公开读取；`restricted` 敏感度禁止与它组合。
 
+创建者可以通过“显式引用委派”把一个具体 `private` Asset 挂载给已注册目标应用。委派不会把
+Asset 整体改成 `delegated`：目标应用只能解析自己的稳定 `shadow://{target_app}/...` 引用，并为
+该引用指向的版本申请短时读取授权。引用记录保留 `delegated_by_app_id` 供审计；目标应用或委派者
+都可以解绑，目标应用不能自行恢复已被委派者撤销的私有引用。
+
 所有服务端调用使用各应用独立 Bearer 凭据。服务只能在业务侧先完成用户授权后请求 Asset；
 Asset 不替业务项目判断记录权限。非公开内容通过具体 `AssetVersion` 的短时 HMAC URL 读取，
 日志不得记录查询参数。
@@ -65,6 +70,10 @@ shadow://health/lab-reports/{id}
 shadow://travel/visits/{id}
 shadow://archive/records/{id}
 ```
+
+餐图等跨应用捕获使用相同规则，例如
+`shadow://health/meals/2026-09-01/lunch`。创建者以自己的服务凭据调用委派接口并指定目标应用；
+Health 随后只使用自己的服务凭据按 URI 解析、签发短时读取 URL，不接触创建者的 Token。
 
 `(app_id, reference_key)` 唯一，实现幂等创建与安全重试。业务项目应在本地事务中写 Outbox，
 失败后重试引用创建/解绑；Platform 通过 outbox 和审计事件支持定期对账。首版不引入分布式事务。
