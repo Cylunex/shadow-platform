@@ -1,5 +1,7 @@
 # Shadow Profile Compiler
 
+> 2026-09-07 设计衔接：统一鉴权、Agent 与 Nexus 目标规范以 [Platform UA-1](nexus-unified-access-design.md) 为准。不再新增领域自管 OIDC/Session、Agent registry/Grant/审批中心或模型/工具通用循环；普通明确写入采用中央 current_intent。旧“无 Gateway/仅本地鉴权/平台永不处理 Prompt”属于被替代的目标约定。以下相关条目仅描述旧实现/历史阶段，不能作为新增实现继续复制；未迁移接口仍保留当前安全限制。
+
 Shadow 的部署真相由四类输入共同组成：Canonical Deployment、App Catalog、Plugin Instance
 Registry 和 Agent Profile。领域仓库只声明一次 Plugin Definition、能力合同和 Surface；Platform
 将同一份来源编译为不同运行端需要的投影，不再为 Nexus 或 App 人工维护第二套领域清单。
@@ -25,8 +27,7 @@ Plugin Definition + Deployment + Catalog + Instance + Profile
 - Deployment：Canonical Product ID，以及该产品进入 DSH、Nexus、App 中的哪些通道；
 - Instance：只保存真实地址和凭据对应的环境变量名；
 - App Catalog：移动入口、认证模式、健康检查和可信别名；
-- Profile：只选择允许模型看见的能力。Nexus Profile 默认只包含读取/分析能力，写入走隐藏
-  Host Review 通道。
+- Profile：只选择允许模型看见的能力。Nexus Profile 默认只包含读取/分析能力，写入由隐藏 Host executor 处理；目标走中央 Access + Command，旧 Review 仅兼容。
 
 真实地址、Token、IP、端口和证书不属于任何编译输入文件，运行时仍从仓库外环境注入。
 
@@ -104,8 +105,8 @@ Android 壳直接进入统一工作台，同时保留各领域页面作为纵深
 
 领域可以声明 `quick-action` Surface，把称重、记支出等高频入口上浮到 Nexus。编译器要求每个
 Quick Action 与且仅与一个 Capture Surface 的 capability、operation、risk 和 intent 前缀匹配；
-浏览器表单不能凭空获得新的写权限。Nexus 仍通过领域已有 Draft/Review 协议执行，领域继续负责
-校验、幂等、事实提交和回执。
+浏览器表单不能凭空获得新的写权限。当前 Nexus 使用 Draft/Review；目标逐 operation 声明 Command/Result 与 auth_mode，
+领域继续负责资源校验、幂等、事实提交和回执。
 
 ## 一致性与降级
 
@@ -118,3 +119,7 @@ Quick Action 与且仅与一个 Capture Surface 的 capability、operation、ris
 
 生产切换前仍需完成 DSH `dump-config`、无模型 smoke test、Nexus Runtime 加载、App Catalog
 校验和领域 `/healthz`/`/readyz` 检查。编译成功只证明装配一致，不替代服务健康检查。
+
+## UA-1 目标编译增量（尚未实现）
+
+增加 auth_mode、Access audience/instance、SDK/合同兼容范围、execution/结果类型、状态查询与披露用途投影；凭据只由中央提供，编译物不分发全量 registry。central 模式不能生成每域长期 Agent Token 依赖，也不能同时启用同能力的旧写路由。Runtime Schema/validator 由同一合同生成，构建 hash 包含这些策略输入。

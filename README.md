@@ -47,3 +47,5 @@ python -m venv .venv
 - [能力 Conformance、运行证据与恢复验证](docs/operations-conformance.md)
 - [领域项目插件化接入清单](docs/domain-plugin-onboarding.md)
 - [安全边界](docs/security.md)
+
+- [统一鉴权、Agent 与 Nexus 接入设计（目标方案，尚未实现）](docs/nexus-unified-access-design.md)

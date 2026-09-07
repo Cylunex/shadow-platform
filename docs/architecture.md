@@ -1,15 +1,17 @@
 # Shadow Platform 架构
 
+> 2026-09-07 设计衔接：统一鉴权、Agent 与 Nexus 目标规范以 [Platform UA-1](nexus-unified-access-design.md) 为准。不再新增领域自管 OIDC/Session、Agent registry/Grant/审批中心或模型/工具通用循环；普通明确写入采用中央 current_intent。旧“无 Gateway/仅本地鉴权/平台永不处理 Prompt”属于被替代的目标约定。以下相关条目仅描述旧实现/历史阶段，不能作为新增实现继续复制；未迁移接口仍保留当前安全限制。
+
 ## 1. 范围
 
 Shadow Platform 为所有面向人的 Shadow Web 应用提供统一身份，并通过 Asset Service 提供统一文件协议。
-同时提供 LLM 非敏感配置、密钥文件约定和 Agent 本地验证规范，但不代理模型或 Agent 流量。
+目标统一 Access/Session、Agent/MCP 与模型 Gateway；业务资源权限与事实留领域。下图及未改造章节描述 legacy 基线，目标链路以 UA-1 为准。
 
 它不负责：
 
 - Garden、Health、Stock、Travel 的业务数据；
 - 地图成员、文章编辑者、健康记录所有者等资源级权限；
-- 领域 Agent/MCP 请求转发和业务执行；
+- 领域业务事务与事实计算；Agent/MCP 的公共传输、鉴权和目录属于 Platform；
 - ShadowVerse、Wingman 等纯 CLI/Skill 项目的登录。
 
 ## 2. 逻辑结构
@@ -57,7 +59,7 @@ email           可变联系地址
 
 ### 3.1 SSO 与应用会话
 
-每个应用完成 Authorization Code + PKCE 流程，并建立自己的 HttpOnly 会话。应用之间不共享业务 Cookie；用户访问另一个应用时会短暂跳转 Identity，并利用已有身份会话自动返回。
+目标由中央登录服务和共享 SDK 完成 Authorization Code + PKCE；Session 状态统一管理，各应用只设置 host-only handle Cookie，不自建会话库。旧实现继续本地会话直至迁移完成。
 
 新项目和后续未接入项目只实现原生 OIDC，不再增加 Nginx `auth_request`、旧密码或双登录
 兼容层。Health 已存在的 Forward Auth / Hybrid 链路保持现状，视为不向其他项目扩展的
@@ -155,38 +157,17 @@ sequenceDiagram
 - Redis：Authelia 会话专用 ACL 用户和 DB index。
 - Nginx：唯一公网入口，负责 TLS、限流、请求体限制和可信转发头。
 
-## 9. LLM 配置与直连
+## 9. 统一模型接入
 
-平台不部署 AI Gateway。版本化 registry 统一：
+目标使用 Platform Model Gateway 和共享 client，集中维护 Provider 凭据、传输、预算和 fallback；领域保留 Prompt/Skill/eval、计算与数据口径。中央临时处理必要正文，默认不持久记录；用途和敏感数据披露按 UA-1 校验。
 
-- `openai-compatible` 或 `anthropic` 协议类型；
-- `responses`、`chat-completions` 或 `messages` 原生 API；
-- Provider Base URL；
-- `chat-default`、`reasoning-default`、`vision-default` 等稳定别名；
-- 实际模型、超时和备用别名；
-- 每项目密钥文件的相对位置。
+当前 `llm_client.py` 的进程内直连作为迁移来源，传输实现复用到中央；不再要求每域维护独立模型连接器。
 
-部署脚本将选定别名解析为项目自己的 `llm.env`，其中只包含密钥文件路径。共享 SDK 在各项目进程内完成同步、异步和流式直连，并可把 Token、延迟、状态等固定元数据写入本地 outbox。平台不接触提示词、图片、工具参数、回答或流式数据；统计链路故障也不影响模型请求。
+## 10. 统一 Access 与 Agent Runtime
 
-## 10. Agent 控制面
+目标由 Platform 集中维护主体、Session、委托、撤销、内联确认、工具目录和通用运行组件，Nexus 复用 DSH loop。领域挂载 SDK，只保留业务 ACL、事务、任务与真实 Receipt。
 
-平台不部署 Agent Gateway。Agent registry 统一 `agent_id`、负责人项目、audience、scopes、
-禁用状态和 Token 摘要文件。Shadow Plugin Registry 管理远程插件实例，Agent Profile 选择
-每个运行时实际装载的实例、能力和预授权策略。各应用通过共享 SDK 在本地验证 Bearer Token，
-并继续由自己的 API/MCP 层检查资源权限、幂等和审计。
-
-统一 Agent 采用控制面与数据面分离：
-
-- Platform 管理能力合同、插件实例、Profile 策略和 Harness adapter；
-- 各项目管理领域 Skill、Prompt、工具实现和 evals；
-- 跨项目业务流程属于独立 Composition Plugin，不进入 Platform 核心；
-- Harness 在部署时装载各项目能力包，并使用目标项目的独立凭据直接调用；
-- 一个用户可见人格不对应一个全权限 Token，项目凭据不能互相替代。
-
-凭据文件只保存高熵 Token 的 SHA-256，可同时配置当前和下一份摘要完成无停机轮换。
-Capability Manifest 使用 `contracts/agent-capability-manifest.schema.json` 描述稳定能力、工具、
-数据敏感度、确认、资源授权和幂等要求。完整边界与 Foliant/Travel 的实践结论见
-`docs/unified-agent.md`。
+当前 registry + token hash + 本地 AgentAuthenticator 只用于 legacy 兼容。按 capability 切 central 后旧路径拒绝，不在中央故障时回退旧授权。主体/数据模型、票据/claim、迁移与验收见 [UA-1](nexus-unified-access-design.md)。
 
 ## 11. 新项目公网入口
 

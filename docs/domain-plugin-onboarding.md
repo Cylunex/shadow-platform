@@ -1,12 +1,13 @@
 # 领域项目插件化接入清单
 
+> 2026-09-07 设计衔接：统一鉴权、Agent 与 Nexus 目标规范以 [Platform UA-1](nexus-unified-access-design.md) 为准。不再新增领域自管 OIDC/Session、Agent registry/Grant/审批中心或模型/工具通用循环；普通明确写入采用中央 current_intent。旧“无 Gateway/仅本地鉴权/平台永不处理 Prompt”属于被替代的目标约定。以下相关条目仅描述旧实现/历史阶段，不能作为新增实现继续复制；未迁移接口仍保留当前安全限制。
+
 ## 1. 接入目标
 
 领域项目先是一套可以独立登录、部署、升级和使用的完整应用，再通过 Shadow Plugin 合同暴露
-有限能力。Platform 只校验、注册和编译合同；DSH 使用领域专属凭据直接访问项目 API，不经过
-Platform 转发业务流量。
+有限能力。Platform 统一编译、身份/Session、Agent/工具/模型接入；领域通过共享 SDK 保留业务权限与执行。
 
-首批为 Health、Ledger、Travel、Archive 和 Garden。Foliant、Verse 与 Wingman 不在当前范围。
+本轮领域为 Health、Ledger、Travel、Archive、Garden 和 Foliant；Nexus/App 是统一入口。其他项目不在本轮范围。
 
 ## 2. 项目目录
 
@@ -48,9 +49,9 @@ MCP 项目另提供静态 `mcp-tools.json`；Composition Plugin 则提供
 4. 再编写 Skill，说明何时调用、调用顺序、失败降级和事实边界。
 5. 最后配置 Profile，只选择当前场景需要的插件实例与能力。
 
-需要出现在 Nexus 的项目必须声明 `surfaces.yaml`。标准审核统一使用 `shadow.review.v1`（公共
-Envelope 见 `contracts/shadow-review.schema.json`），至少提供
-幂等创建、待审核列表、确认和拒绝四个操作；Capture-only 项目可以声明 `create-only`。领域项目
+需要出现在 Nexus 的项目必须声明 `surfaces.yaml`。新路径使用 UA-1 Command/Result，
+最小实现为共享鉴权、资源检查、事务 handler 与状态查询；不强制提供审核 CRUD。
+`shadow.review.v1` 与 `create-only` 仅供旧路径兼容且必须准确报告结果类型。领域项目
 拥有草稿状态和最终写入，Nexus 只缓存投影、引用、Revision 和 Receipt。App 通道则只由 Deployment
 与 App Catalog 生成，不因一个插件拥有 Agent 能力而自动出现移动入口。
 

@@ -1,101 +1,23 @@
-# Agent 统一接入（无网关）
+# Agent 统一接入
 
-## 原则
+状态：2026-09-07 目标设计；中央服务尚未实现。规范入口为 [统一身份、鉴权与 Agent 接入 UA-1](nexus-unified-access-design.md)。
 
-Agent 的身份、audience、scope 和凭据格式统一，但调用仍然直接进入所属项目的 API 或 MCP 服务：
+## 唯一授权来源
 
-```text
-Agent -> Health / Foliant / Travel -> 项目业务权限
-```
+Platform 集中管理 Agent/workload/device、user 委托、audience/capability/resource scope、Token/Session 生命周期与撤销。领域挂载 SDK 并保留 owner、成员、来源和内容可见性检查，不再维护自己的 Agent 注册表、摘要文件或 Grant 管理页。
 
-平台不转发 Agent 请求，也不集中承载 Foliant 的工具、Health 的写入逻辑或 Travel 的规划流程。
+一个稳定 Agent 身份可按中央授权访问多域，但每张短期票据只绑定一个 audience/instance/command；不使用跨全部域的万能 Token。机器身份不自动代表人类，执行前必须有 current_intent、standing_policy 或精确 inline_confirmation。
 
-领域 Skill、Prompt 和 evals 也不进入 Platform。各项目通过 `agent/manifest.yaml` 发布稳定
-Capability，Platform 只负责校验、路由和部署时聚合。完整设计见 `docs/unified-agent.md`。
+## 调用链
 
-Catalog 中纯后台服务使用 `auth.mode: service-bearer`。该值表示浏览器 Cookie 和代理身份头
-均无效；真正可调用的身份仍以本页 Agent registry 的 audience、scopes 与凭据摘要为准。
+统一 Host/MCP → Platform 目录/Access → 目标领域 SDK → 本地资源检查与事务 → 领域 Result/Receipt。中央拒绝或不可用时不回退旧凭据；模型不能提供 owner、scope、票据或批准人。
 
-## Registry
+普通明确记录无二次确认，高影响确认留在当前交互；授权凭证与执行 Receipt 分开。具体 API、期限、撤销线性化、中央故障与兼容切换均由 UA-1 定义，不在领域另行解释。
 
-`agents/registry.yml` 登记：
+## 当前实现的兼容说明
 
-- 稳定 `agent_id`；
-- 负责人项目 `owner_app`；
-- 可以调用的应用 `audiences`；
-- 最小权限 scopes，以及应用在服务端验证的 capability grants；
-- 一至两个 Token SHA-256 文件，用于无停机轮换；
-- 是否禁用。
+`shadow_sdk.agent.AgentAuthenticator` 目前仍是本地 YAML registry + SHA-256 摘要校验，并非中央服务。Health/Archive 还有不同 registry 实现；旧项目按现有配置运行到对应能力切换。`generate_agent_token.py` 仅维护 legacy 主体，不能作为新接入必须每域创建 Token 的模板。
 
-Registry 不保存原始 Token。使用仓库工具生成高熵 Token，并在 secrets 目录只保存 SHA-256：
+现有 scope 与领域 Grant 仍必须同时满足，不可先删除校验。迁入中央的授权仅取有效权限交集，旧 allow_confirm 不自动成为新 execute 权限；按 capability 选择唯一 auth_mode 后才停旧入口。
 
-```bash
-.venv/Scripts/python.exe scripts/generate_agent_token.py \
-  --digest-output "$SHADOW_PLATFORM_SECRETS_DIR/agents/health-assistant/current-token.sha256"
-```
-
-工具只显示一次原始 Token，交给对应 Agent；命令行和摘要文件都不包含原始值。没有 `--force` 时不会覆盖已有摘要。
-
-原始 Token 只交给 Agent，摘要文件放在：
-
-`$SHADOW_PLATFORM_SECRETS_DIR/agents/<agent-id>/current-token.sha256`。实际 secrets 根目录由
-仓库外运维配置注入。
-
-用户可见的全局人格不是 Agent principal。统一 Harness 应按目标项目持有多份最小权限凭据，
-不要登记一个横跨所有 audience 的万能 Token。
-
-## 项目验证
-
-每个项目启动时构造本地验证器：
-
-```python
-import os
-
-from shadow_sdk.agent import AgentAuthenticator
-
-authenticator = AgentAuthenticator(
-    os.environ["SHADOW_AGENT_REGISTRY_FILE"],
-    secrets_dir=os.environ["SHADOW_PLATFORM_SECRETS_DIR"],
-    audience="health",
-)
-identity = authenticator.authenticate(request.headers.get("Authorization", ""))
-identity.require_scope("health.write")
-```
-
-验证过程只做本地 SHA-256 和常量时间比较，没有中央网络请求。项目仍需检查幂等键、资源权限和写入审计。
-
-Travel 已验证 scope 之外还需要资源级授权：即使 Token 具备 `travel.maps.read`，数据库仍应
-确认该 `agent_id` 获得目标地图的读取许可。Foliant 已验证路由应显式分类且默认拒绝；新增
-机器路由不能仅因为路径位于 `/api/machine/` 就自动获得某个 scope。
-
-## 审计字段
-
-Agent 写操作至少记录：
-
-```text
-agent_id
-owner_app
-audience
-scope
-request_id
-idempotency_key
-result
-created_at
-```
-
-Agent 如果代表某个用户执行操作，不能直接相信 Agent 自报的 `actor_sub`。用户委托令牌的签发和验证另行设计；未实现前只允许明确的服务身份权限。
-
-## Capability Manifest
-
-每个领域项目在自己的仓库维护 `agent/manifest.yaml`，schema 为
-`contracts/agent-capability-manifest.schema.json`。Manifest 描述的是能力而不是凭据，至少应
-明确 audience、scopes、工具、读写效果、数据敏感度、用户确认、资源授权和幂等要求。
-
-Platform 中的 `agents/capability-manifest.yml.example` 展示了 Travel 的只读地图和草案能力。
-业务项目发布前必须验证：
-
-- Skill 引用的 capability 全部存在；
-- capability 的 audience 已在 App Catalog 开启 Agent；
-- Registry 中至少有一个预期 principal 具备所需 audience/scopes；
-- `write` / `delete` 不允许无确认且必须幂等；
-- `draft` 只能写草案资源，应用正式数据仍由确定性确认接口修改。
+现有旧配置的完整参考保存在 [v1 历史实现说明](legacy/agent-access-v1.md)，仅用于迁移期维护。
