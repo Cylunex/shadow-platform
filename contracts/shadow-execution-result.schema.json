@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-execution-result-v1.json",
+  "title": "Shadow Execution Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "command_id", "capability_ref", "status", "result_kind", "replayed"],
+  "properties": {
+    "protocol": { "const": "shadow.execution-result.v1" },
+    "command_id": { "type": "string", "pattern": "^cmd_[A-Za-z0-9_-]{8,128}$" },
+    "capability_ref": { "type": "string", "pattern": "^shadow://capabilities/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+    "status": { "enum": ["committed", "accepted", "failed"] },
+    "result_kind": { "enum": ["record", "draft", "task", "external_action"] },
+    "resource_ref": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 },
+    "resource_revision": { "type": ["integer", "string"], "minLength": 1 },
+    "receipt_ref": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 },
+    "status_ref": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "replayed": { "type": "boolean" },
+    "summary": { "type": "string", "maxLength": 1000 },
+    "fields": { "type": "object" },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,79}$" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "committed" } } },
+      "then": { "required": ["resource_ref", "receipt_ref", "completed_at"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "accepted" } } },
+      "then": { "required": ["status_ref"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "failed" } } },
+      "then": { "required": ["error"] }
+    }
+  ]
+}

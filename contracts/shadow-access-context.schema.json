@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-access-context-v1.json",
+  "title": "Shadow Access Context v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "principal_id", "principal_type", "audience", "domain_instance", "capabilities", "authorization_mode", "decision_ref", "issued_at", "expires_at"],
+  "properties": {
+    "protocol": { "const": "shadow.access-context.v1" },
+    "principal_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "principal_type": { "enum": ["user", "agent", "workload", "device"] },
+    "user_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "client_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "agent_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "session_ref": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "delegation_ref": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "audience": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "domain_instance": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "capabilities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" } },
+    "resource_refs": { "type": "array", "uniqueItems": true, "maxItems": 64, "items": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 } },
+    "authorization_mode": { "enum": ["current_intent", "standing_policy", "inline_confirmation"] },
+    "decision_ref": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "policy_version": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "contract_version": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" }
+  }
+}

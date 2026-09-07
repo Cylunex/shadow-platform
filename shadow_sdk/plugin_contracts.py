@@ -191,6 +191,7 @@ def validate_capability_semantics(manifest: dict[str, Any]) -> list[str]:
         confirmation = capability.get("confirmation")
         idempotent = capability.get("idempotency_required")
         reversible = capability.get("reversible")
+        execution = capability.get("execution")
         tools = capability.get("tools", [])
         tool_names.extend(tool.get("name") for tool in tools)
         if confirmation not in confirmation_by_risk.get(risk_level, set()):
@@ -211,6 +212,21 @@ def validate_capability_semantics(manifest: dict[str, Any]) -> list[str]:
                 errors.append(f"{capability_id}:delete-must-preserve-at-least-one-item")
         elif "destructive_limits" in capability:
             errors.append(f"{capability_id}:destructive-limits-only-valid-for-delete")
+        if execution is not None:
+            interaction = execution["interaction"]
+            authorization_mode = execution["authorization_mode"]
+            if interaction == "inline_confirm" and authorization_mode != "inline_confirmation":
+                errors.append(f"{capability_id}:inline-confirm-needs-inline-authorization")
+            if interaction == "direct" and authorization_mode == "inline_confirmation":
+                errors.append(f"{capability_id}:direct-cannot-use-inline-authorization")
+            if interaction == "direct" and (
+                execution["effect_scope"] == "external"
+                or execution["reversibility"] == "irreversible"
+                or execution["result_kind"] == "external_action"
+            ):
+                errors.append(f"{capability_id}:high-impact-execution-cannot-be-direct")
+            if effect in mutation_effects and execution.get("idempotency_window_seconds") is None:
+                errors.append(f"{capability_id}:execution-needs-idempotency-window")
         resource = capability.get("confirmation_resource")
         if resource is not None:
             placeholders = set(re.findall(r"\{([A-Za-z][A-Za-z0-9_]*)\}", resource["template"]))

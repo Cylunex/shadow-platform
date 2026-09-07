@@ -90,6 +90,8 @@ def _operation_catalog(plugin: ValidatedPlugin) -> dict[str, dict[str, Any]]:
                 "risk_level": capability["risk_level"],
                 "confirmation_resource": capability.get("confirmation_resource"),
             }
+            if capability.get("execution") is not None:
+                projected["execution"] = capability["execution"]
             previous = catalog.setdefault(operation_id, projected)
             if previous != projected:
                 raise PluginContractError(
@@ -346,6 +348,9 @@ def build_shadow_profile(
         "shadow-sync-envelope.schema.json",
         "shadow-space.schema.json",
         "shadow-operation-context.schema.json",
+        "shadow-command.schema.json",
+        "shadow-execution-result.schema.json",
+        "shadow-access-context.schema.json",
         "shadow-capability-status.schema.json",
         "shadow-conformance-evidence.schema.json",
         "shadow-restore-drill.schema.json",

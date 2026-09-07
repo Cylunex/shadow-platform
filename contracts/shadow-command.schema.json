@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shadow-command-v1.json",
+  "title": "Shadow Structured Command v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "command_id", "capability_ref", "operation_id", "schema_version", "arguments", "target_refs", "source_refs"],
+  "properties": {
+    "protocol": { "const": "shadow.command.v1" },
+    "command_id": { "type": "string", "pattern": "^cmd_[A-Za-z0-9_-]{8,128}$" },
+    "capability_ref": { "type": "string", "pattern": "^shadow://capabilities/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+    "operation_id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,159}$" },
+    "schema_version": { "const": 1 },
+    "arguments": { "type": "object" },
+    "target_refs": { "type": "array", "uniqueItems": true, "maxItems": 64, "items": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 } },
+    "expected_revision": { "type": ["integer", "string"], "minLength": 1 },
+    "source_refs": { "type": "array", "uniqueItems": true, "maxItems": 64, "items": { "type": "string", "maxLength": 2048 } },
+    "group_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "item_id": { "type": "string", "minLength": 1, "maxLength": 160 }
+  }
+}

@@ -147,6 +147,7 @@
         "resource_grant_required": { "type": "boolean" },
         "idempotency_required": { "type": "boolean" }
         ,
+        "execution": { "$ref": "#/$defs/execution" },
         "confirmation_resource": {
           "type": "object",
           "additionalProperties": false,
@@ -179,6 +180,23 @@
             "min_remaining": { "type": "integer", "minimum": 1 }
           }
         }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interaction", "effect_scope", "reversibility", "result_kind", "authorization_mode"],
+      "properties": {
+        "interaction": { "enum": ["direct", "inline_confirm"] },
+        "effect_scope": { "enum": ["private", "shared", "external"] },
+        "reversibility": { "enum": ["correctable", "reversible", "compensatable", "irreversible"] },
+        "result_kind": { "enum": ["record", "draft", "task", "external_action"] },
+        "authorization_mode": { "enum": ["current_intent", "standing_policy", "inline_confirmation"] },
+        "status_operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,159}$"
+        },
+        "idempotency_window_seconds": { "type": "integer", "minimum": 60, "maximum": 2592000 }
       }
     }
   }
