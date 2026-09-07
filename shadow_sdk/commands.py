@@ -4,7 +4,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from shadow_sdk.plugin_contracts import (
     PluginContractError,
@@ -33,7 +33,7 @@ def command_arguments_sha256(arguments: Any) -> str:
 
 
 def validate_command(document: Mapping[str, Any], *, platform_root: Path | None = None) -> None:
-    root = platform_root or Path(__file__).resolve().parent
+    root = platform_root or Path(__file__).resolve().parents[1]
     validate_document(
         dict(document),
         contract_schema_path(root, "shadow-command.schema.json"),
@@ -44,7 +44,7 @@ def validate_command(document: Mapping[str, Any], *, platform_root: Path | None 
 def validate_execution_result(
     document: Mapping[str, Any], *, platform_root: Path | None = None
 ) -> None:
-    root = platform_root or Path(__file__).resolve().parent
+    root = platform_root or Path(__file__).resolve().parents[1]
     validate_document(
         dict(document),
         contract_schema_path(root, "shadow-execution-result.schema.json"),
@@ -59,6 +59,7 @@ def committed_result(
     receipt_ref: str,
     completed_at: str,
     replayed: bool,
+    result_kind: Literal["record", "draft", "task", "external_action"] = "record",
     resource_revision: int | str | None = None,
     summary: str | None = None,
     fields: Mapping[str, Any] | None = None,
@@ -67,8 +68,9 @@ def committed_result(
         "protocol": "shadow.execution-result.v1",
         "command_id": command["command_id"],
         "capability_ref": command["capability_ref"],
+        "operation_id": command["operation_id"],
         "status": "committed",
-        "result_kind": "record",
+        "result_kind": result_kind,
         "resource_ref": resource_ref,
         "receipt_ref": receipt_ref,
         "completed_at": completed_at,

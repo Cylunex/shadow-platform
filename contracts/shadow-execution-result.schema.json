@@ -4,11 +4,12 @@
   "title": "Shadow Execution Result v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocol", "command_id", "capability_ref", "status", "result_kind", "replayed"],
+  "required": ["protocol", "command_id", "capability_ref", "operation_id", "status", "result_kind", "replayed"],
   "properties": {
     "protocol": { "const": "shadow.execution-result.v1" },
     "command_id": { "type": "string", "pattern": "^cmd_[A-Za-z0-9_-]{8,128}$" },
     "capability_ref": { "type": "string", "pattern": "^shadow://capabilities/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]{1,63}/[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+    "operation_id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,159}$" },
     "status": { "enum": ["committed", "accepted", "failed"] },
     "result_kind": { "enum": ["record", "draft", "task", "external_action"] },
     "resource_ref": { "type": "string", "pattern": "^shadow://", "maxLength": 2048 },

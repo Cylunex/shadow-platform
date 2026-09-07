@@ -42,6 +42,8 @@ def test_command_and_committed_result_contracts():
         fields={"weight_kg": "70.2"},
     )
     validate_execution_result(result, platform_root=ROOT)
+    validate_execution_result(result)
+    assert result["operation_id"] == value["operation_id"]
 
 
 def test_committed_result_requires_receipt_and_resource():
@@ -51,6 +53,7 @@ def test_committed_result_requires_receipt_and_resource():
                 "protocol": "shadow.execution-result.v1",
                 "command_id": "cmd_example123",
                 "capability_ref": CAPABILITY,
+                "operation_id": "execute_health_command",
                 "status": "committed",
                 "result_kind": "record",
                 "replayed": False,

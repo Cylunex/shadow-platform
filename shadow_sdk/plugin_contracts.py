@@ -140,9 +140,13 @@ def validate_document(document: dict[str, Any], schema_path: Path, *, label: str
 def contract_schema_path(platform_root: Path, name: str) -> Path:
     """Resolve a contract from a source checkout or the installed SDK wheel."""
 
-    source_path = platform_root.resolve() / "contracts" / name
-    if source_path.is_file():
-        return source_path
+    resolved_root = platform_root.resolve()
+    source_paths = [resolved_root / "contracts" / name]
+    if resolved_root.name == "shadow_sdk":
+        source_paths.append(resolved_root.parent / "contracts" / name)
+    for source_path in source_paths:
+        if source_path.is_file():
+            return source_path
     packaged_path = Path(__file__).resolve().parent / "contracts" / name
     if packaged_path.is_file():
         return packaged_path

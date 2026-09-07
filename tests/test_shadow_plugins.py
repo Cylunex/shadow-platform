@@ -47,6 +47,12 @@ def test_conformance_plugin_is_valid():
     }
 
 
+def test_contract_schema_resolves_from_sdk_source_directory():
+    assert contract_schema_path(ROOT / "shadow_sdk", "shadow-plugin.schema.json") == (
+        ROOT / "contracts" / "shadow-plugin.schema.json"
+    )
+
+
 def test_capability_semantics_enforce_risk_confirmation_mapping():
     manifest = yaml.safe_load((FIXTURE / "agent" / "manifest.yaml").read_text(encoding="utf-8"))
     manifest["capabilities"][1]["confirmation"] = "none"
